@@ -65,4 +65,4 @@
 
 (defn -main
   [args]
-  (start true))
+  (start {:join? true}))
