@@ -2,8 +2,7 @@
   (:require [clj-http.client :as http]
             [clj-http.util :as util]))
 
-
-(defn call-internal
+(defn- call-internal
   "invoke a method with args using http
    return http response. make it easy to debug"
   [endpoint-url method-name & args]
@@ -23,9 +22,10 @@
         :body
         (read-string))))
 
-
 (defn help
-  "get all the commands of the server support"
+  "get all the commands of the server support
+   return a collection of map like
+   [{:name \"conj\" :doc \"doc\" :arglist \"([x] [x y])} ... ]"
   [endpoint-url]
   (-> (http/get endpoint-url )
       :body
