@@ -24,10 +24,9 @@
   "get all public functions in the namespace ns
   return a map that key is function-name and value is a command"
   [ns]
-  (->> (ns-publics ns)
-      (filter #(var-fn? (second %)))
-      (map #(vector (str (first %))
-                    (mk-command (str (first %)) (second %))))
-      (flatten)
-      (apply hash-map)))
+  (into {}
+        (for [[var-sym the-var] (ns-publics ns)
+              :when (var-fn? the-var)
+              :let [var-name (str var-sym)]]
+          [var-name (mk-command var-name the-var)])))
 
