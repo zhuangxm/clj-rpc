@@ -9,6 +9,14 @@ rule:
 
 ## Usage 
 
+add to porject.clj
+
+````clojure
+[clj-rpc "0.1.0-SNAPSHOT"]
+```
+
+sample code:
+
 ```clojure
 (ns rpc.demo
  (:require [clj-rpc.server :as server]
@@ -33,11 +41,7 @@ rule:
 
 ```
 
-## Todo
-
-* add some test
-* check the compjure utf-8 problem.
-* Can generate the client stub program according the help.
+You can use leiningen plugin [lein-clj-rpc](https://github.com/zhuangxm/lein-clj-rpc) to generate client stub code
 
 ## License
 
