@@ -33,7 +33,7 @@ sample code:
 
  ;==============client code ===============
  ;; get all export commands
- (client/help "http://localhost:8080/help)
+ (client/help "http://localhost:8080/help")
  
  ;; invoke some command
  ;; remote invoke the function (str "hello," "world") and return the result
