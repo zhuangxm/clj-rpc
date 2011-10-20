@@ -35,5 +35,9 @@
   (is (= "中文测试"
          (client/call "http://localhost:8080/invoke" "str" "中文" "测试")))
   (is (= [1 2 3 4]
-           (client/call "http://localhost:8080/invoke" "concat" [1 2] [3 4]))))
+           (client/call "http://localhost:8080/invoke" "concat" [1 2] [3 4])))
+  (is (= "j-中文j-测试"
+         (client/json-call "http://localhost:8080/json/invoke" "str" "j-中文" "j-测试")))
+  (is (= [0 1 2 3 4]
+           (client/json-call "http://localhost:8080/json/invoke" "concat" [0] [1 2] [3 4]))))
 
