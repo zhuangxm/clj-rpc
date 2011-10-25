@@ -4,15 +4,11 @@
             [compojure.handler :as handler]
             [clj-rpc.command :as command]
             [clojure.tools.logging :as logging]
-            [cheshire.core :as json]))
+            [cheshire.core :as json]
+            [clj-rpc.protocol :as protocol]))
 
 ;;use dynamic method to export commands
 (defonce commands (atom {}))
-
-;;define protocol handle function
-;;TODO this method is not so good.
-(def ^:dynamic *read-function* read-string)
-(def ^:dynamic *write-function* pr-str)
 
 (defn export-commands
   "export all functions in the namespace ns"
@@ -24,26 +20,25 @@
 (defn execute-method
   "get the function from the command-map according the method-name and
    execute this function with args
-   return clojure string of the execute result"
+   return the execute result"
   [command-map method-name args]
   (logging/debug "execute-method == method-name: " method-name " args: " args)
   (when-let [f (command/.func (command-map method-name))]
-    (*write-function* (apply f args))))
+    (apply f args)))
 
 (defn help-commands
-  "return clojure string of the command list"
+  "return the command list"
   [commands]
   (->> (vals commands)
       (map #(dissoc % :func))
-      (sort-by #(:title %))
-      (*write-function*)))
+      (sort-by #(:title %))))
 
 (defroutes main-routes
   (GET "/help" [] (help-commands @commands))
   (POST "/help" [] (help-commands @commands))
-  (POST "/invoke" [method args]
+  (POST "/invoke" [method args :as {serialization :serialization}]
         (logging/debug "received invoke request == method: " method " args: " args)
-        (execute-method @commands method (*read-function* args)))
+        (execute-method @commands method (protocol/decode serialization args)))
   (route/not-found "invalid url"))
 
 
@@ -58,12 +53,16 @@
   [handler]
   (fn [request]
     (let [uri (:uri request)
-          json-tag "/json/"]
-      (if (.startsWith uri json-tag )
-        (binding [*read-function* json/parse-string
-                  *write-function* json/generate-string]
-          (handler (assoc request :uri (change-json-uri uri json-tag))))
-        (handler request))) ))
+          json-tag "/json/"
+          json? (.startsWith uri json-tag)
+          serialize-method (if json?
+                             (protocol/mk-json-serialization)
+                             (protocol/mk-clojure-serialization))
+          new-uri (if json? (change-json-uri uri json-tag) uri)
+          new-request (-> request
+                           (assoc :uri new-uri :serialization serialize-method)) 
+          response (handler new-request)]
+      (update-in response [:body] (partial protocol/encode serialize-method) )) ))
 
 ;;define a jetty-instance used to start or stop
 (defonce jetty-instance (atom nil))
@@ -91,4 +90,3 @@
      (if @jetty-instance (stop))
      (reset! jetty-instance
              (run-jetty (main-handler) options))))
-
