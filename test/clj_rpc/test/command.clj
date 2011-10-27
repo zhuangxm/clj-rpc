@@ -18,6 +18,10 @@
 ;"check the get-commands"
 (deftest test-get-commands
   (let [fs (get-commands 'clojure.core)
+        s-fs (get-commands 'clojure.core #'clojure.core/+ #'clojure.core/meta)
         cmd (get fs "meta")]
     (is (= (.name cmd) "meta") ) 
-    (is (nil? (get fs "unquote")))))
+    (is (nil? (get fs "unquote")))
+    (is (get s-fs "+"))
+    (is (get s-fs "meta"))
+    (is (not (get s-fs "-")))))
