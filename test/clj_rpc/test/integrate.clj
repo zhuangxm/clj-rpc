@@ -9,7 +9,7 @@
   [f]
   (server/start)
   (server/export-commands 'clojure.core)
-  (server/export-commands 'clj-rpc.command)
+  (server/export-commands "clj-rpc.command" 'mk-command "get-commands")
   (f)
   (server/stop))
 
@@ -26,8 +26,10 @@
 ;;test can get all the commands
 (deftest test-help
   (let [commands (client/help "http://localhost:8080/help")]
-    (is (boolean (get-help-command "conj" commands)))
-    (is (boolean (get-help-command "mk-command" commands)))))
+    (is (get-help-command "conj" commands))
+    (is (get-help-command "mk-command" commands))
+    (is (get-help-command "get-commands" commands))
+    (is (not (get-help-command "execute-method" commands)))))
 
 ;;test can invoke correctly.
 ;;include chinese characters and collection
