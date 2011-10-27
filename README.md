@@ -32,12 +32,13 @@ sample code:
  (server/start) 
 
  ;==============client code ===============
+ (def endp (client/rpc-endpoint :server "localhost")
  ;; get all export commands
- (client/help "http://localhost:8080/help")
+ (client/help endp)
  
  ;; invoke some command
  ;; remote invoke the function (str "hello," "world") and return the result
- (client/call "http://localhost:8080/invoke" "str" "hello, " "world")  
+ (client/invoke-rpc endp "str" "hello, " "world")  
 
 ```
 
