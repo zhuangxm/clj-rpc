@@ -31,11 +31,18 @@
 (defonce commands (atom {}))
 
 (defn export-commands
-  "export all functions in the namespace ns"
-  [ns]
-  (require ns)
-  (swap! commands merge 
-         (command/get-commands ns)))
+  "export all functions or specify functions in the namespace ns
+   for example :
+   (export-commands 'clojure.core)
+   (export-commands \"clojure.core\")
+   (export-commands 'clojure.core '+)
+   (export-commands 'clojure.core \"+\")"  
+  [ns & fn-names]
+  (let [ns (symbol ns)]
+    (require ns)
+    (let [var-fns (map #(find-var (symbol (str ns "/" %))) fn-names)]
+      (swap! commands merge 
+             (apply command/get-commands ns var-fns)))))
 
 (defn execute-method
   "get the function from the command-map according the method-name and
