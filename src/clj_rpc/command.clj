@@ -20,13 +20,24 @@
   (try (fn? (var-get x))
        (catch Exception e)))
 
-(defn get-commands 
-  "get all public functions in the namespace ns
+
+(defn filter-commands
+  "get all the functions as commands in the namespace ns
+   if statify (prd var-fn) is true 
   return a map that key is function-name and value is a command"
-  [ns]
+  [ns pred]
   (into {}
         (for [[var-sym the-var] (ns-publics ns)
-              :when (var-fn? the-var)
+              :when (and (var-fn? the-var) (pred the-var))
               :let [var-name (str var-sym)]]
           [var-name (mk-command var-name the-var)])))
+
+(defn get-commands 
+  "get the specify var functions as commands in the namespace ns
+   if the var-fns is null then get all public functions as commands. 
+  return a map that key is function-name and value is a command"
+  ([ns]
+     (filter-commands ns (constantly true)))
+  ([ns & var-fns]
+     (filter-commands ns (set var-fns))))
 
