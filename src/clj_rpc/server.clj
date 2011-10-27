@@ -7,6 +7,15 @@
 ;; to start the http server on the default rpc port 9876
 ;; (stop)
 ;; to stop the server.
+;;
+;; Server urls:
+;; The server supports different wire format (currently clj, json).
+;; First part of URL specify it:
+;; e.g. http://locahost:9876/json  json format
+;; For each format, the server support 2 commands:
+;; help -- GET/POST returns the list of the functions
+;; invoke -- POST (parameters: method, args) invoke the function (by
+;;"method")
 (ns clj-rpc.server
   (:use compojure.core, ring.adapter.jetty)
   (:require [compojure.route :as route]
