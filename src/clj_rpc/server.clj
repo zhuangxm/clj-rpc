@@ -1,10 +1,31 @@
+;; Server for simple RPC(http)
+;;
+;; example usage:
+;; (export-commands 'clojure.core)
+;; to export all functions of clojure.core to outside world.
+;; (start)
+;; to start the http server on the default rpc port 9876
+;; (stop)
+;; to stop the server.
+;;
+;; Server urls:
+;; The server supports different wire format (currently clj, json).
+;; First part of URL specify it:
+;; e.g. http://locahost:9876/json  json format
+;; For each format, the server support 2 commands:
+;; help -- GET/POST returns the list of the functions
+;; invoke -- POST (parameters: method, args) invoke the function (by
+;;"method")
 (ns clj-rpc.server
-  (:use compojure.core, ring.adapter.jetty, compojure.response
-        [ring.util.response :only (response content-type)])
+  (:use compojure.core, ring.adapter.jetty)
   (:require [compojure.route :as route]
             [compojure.handler :as handler]
             [clj-rpc.command :as command]
-            [clojure.tools.logging :as logging]))
+            [clojure.tools.logging :as logging]
+            [cheshire.core :as json]
+            [clj-rpc.wire-format :as protocol]))
+
+(def rpc-default-port 9876)
 
 ;;use dynamic method to export commands
 (defonce commands (atom {}))
@@ -15,8 +36,7 @@
    (export-commands 'clojure.core)
    (export-commands \"clojure.core\")
    (export-commands 'clojure.core '+)
-   (export-commands 'clojure.core \"+\")"
-  
+   (export-commands 'clojure.core \"+\")"  
   [ns & fn-names]
   (let [ns (symbol ns)]
     (require ns)
@@ -27,27 +47,28 @@
 (defn execute-method
   "get the function from the command-map according the method-name and
    execute this function with args
-   return clojure string of the execute result"
+   return the execute result"
   [command-map method-name args]
   (logging/debug "execute-method == method-name: " method-name " args: " args)
   (when-let [f (command/.func (command-map method-name))]
-    (pr-str (apply f args))))
+    (apply f args)))
 
 (defn help-commands
-  "return clojure string of the command list"
+  "return the command list"
   [commands]
   (->> (vals commands)
       (map #(dissoc % :func))
-      (sort-by #(:title %))
-      (pr-str)))
+      (sort-by #(:title %))))
 
 (defroutes main-routes
-  (ANY "/help" [] (help-commands @commands))
-  (POST "/invoke" [method args]
-        (logging/debug "received invoke request == method: " method " args: " args)
-        (execute-method @commands method (read-string args)))
+  (ANY "/:s-method/help" [s-method]
+       (when-let [[f-encode] (protocol/serialization s-method)]
+         (f-encode (help-commands @commands))))
+  (POST "/:s-method/invoke" [s-method method args]
+        (logging/debug "invoking (" s-method ") method: " method " args: " args)
+        (let [[f-encode f-decode] (protocol/serialization s-method)]
+          (f-encode (execute-method @commands method (f-decode args)))))
   (route/not-found "invalid url"))
-
 
 ;;define a jetty-instance used to start or stop
 (defonce jetty-instance (atom nil))
@@ -63,13 +84,8 @@
   "start jetty server
    options : same as run-jetty of ring jetty adaptor"
   ([]
-     (start {:join? false :port 8080 :host "127.0.0.1"} ))
+     (start {:join? false :port rpc-default-port :host "127.0.0.1"} ))
   ([options]
      (if @jetty-instance (stop))
      (reset! jetty-instance
-             (run-jetty (handler/api main-routes) options))))
-
-
-(defn -main
-  [args]
-  (start {:join? true}))
+             (run-jetty (handler/site main-routes) options))))
