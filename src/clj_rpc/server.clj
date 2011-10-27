@@ -1,3 +1,12 @@
+;; Server for simple RPC(http)
+;;
+;; example usage:
+;; (export-commands 'clojure.core)
+;; to export all functions of clojure.core to outside world.
+;; (start)
+;; to start the http server on the default rpc port 9876
+;; (stop)
+;; to stop the server.
 (ns clj-rpc.server
   (:use compojure.core, ring.adapter.jetty)
   (:require [compojure.route :as route]
@@ -5,7 +14,9 @@
             [clj-rpc.command :as command]
             [clojure.tools.logging :as logging]
             [cheshire.core :as json]
-            [clj-rpc.protocol :as protocol]))
+            [clj-rpc.wire-format :as protocol]))
+
+(def rpc-default-port 9876)
 
 ;;use dynamic method to export commands
 (defonce commands (atom {}))
@@ -34,35 +45,14 @@
       (sort-by #(:title %))))
 
 (defroutes main-routes
-  (GET "/help" [] (help-commands @commands))
-  (POST "/help" [] (help-commands @commands))
-  (POST "/invoke" [method args :as {serialization :serialization}]
-        (logging/debug "received invoke request == method: " method " args: " args)
-        (execute-method @commands method (protocol/decode serialization args)))
+  (ANY "/:s-method/help" [s-method]
+       (when-let [[f-encode] (protocol/serialization s-method)]
+         (f-encode (help-commands @commands))))
+  (POST "/:s-method/invoke" [s-method method args]
+        (logging/debug "invoking (" s-method ") method: " method " args: " args)
+        (let [[f-encode f-decode] (protocol/serialization s-method)]
+          (f-encode (execute-method @commands method (f-decode args)))))
   (route/not-found "invalid url"))
-
-
-(defn change-json-uri
-  "change the url from /json/* to /* , remove the /json/ tag from url"
-  [uri json-tag]
-  (.substring uri (dec (.length json-tag))))
-
-(defn wrap-protocol
-  "support json protocol if the url is begin with /json/
-  like /json/help or /json/invoke"
-  [handler]
-  (fn [request]
-    (let [uri (:uri request)
-          json-tag "/json/"
-          json? (.startsWith uri json-tag)
-          serialize-method (if json?
-                             (protocol/mk-json-serialization)
-                             (protocol/mk-clojure-serialization))
-          new-uri (if json? (change-json-uri uri json-tag) uri)
-          new-request (-> request
-                           (assoc :uri new-uri :serialization serialize-method)) 
-          response (handler new-request)]
-      (update-in response [:body] (partial protocol/encode serialize-method) )) ))
 
 ;;define a jetty-instance used to start or stop
 (defonce jetty-instance (atom nil))
@@ -74,19 +64,12 @@
     (.stop @jetty-instance))
   (reset! jetty-instance nil))
 
-
-(defn main-handler
-  []
-  (-> main-routes
-      handler/api
-      wrap-protocol))
-
 (defn start
   "start jetty server
    options : same as run-jetty of ring jetty adaptor"
   ([]
-     (start {:join? false :port 8080 :host "127.0.0.1"} ))
+     (start {:join? false :port rpc-default-port :host "127.0.0.1"} ))
   ([options]
      (if @jetty-instance (stop))
      (reset! jetty-instance
-             (run-jetty (main-handler) options))))
+             (run-jetty (handler/site main-routes) options))))
