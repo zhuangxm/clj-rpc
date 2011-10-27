@@ -32,7 +32,9 @@ sample code:
  (server/start) 
 
  ;==============client code ===============
- (def endp (client/rpc-endpoint :server "localhost")
+ ;; Obtain handle to endpoint
+ (def endp (client/rpc-endpoint :server "localhost"))
+
  ;; get all export commands
  (client/help endp)
  
