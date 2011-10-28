@@ -4,7 +4,7 @@
                            [org.clojure/tools.logging "0.2.3"]
                            [clj-http "0.2.1"]
                            [compojure "0.6.5"]
-                           [ring "0.3.11"]]
-            :dev-dependencies [[log4j "1.2.16"]]
-            :main clj-rpc.server)
+                           [ring "0.3.11"]
+                           [cheshire "2.0.2"]]
+            :dev-dependencies [[log4j "1.2.16"]])
 

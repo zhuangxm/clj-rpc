@@ -3,7 +3,6 @@
   (:require [clj-rpc.server :as server]
             [clj-rpc.client :as client]))
 
-
 (defn around-server
   "setup and teardown test enviroment"
   [f]
@@ -22,10 +21,8 @@
       (filter #(= (:name %) command-name))
       first))
 
-;.;. Woohoo! -- @zspencer
-;;test can get all the commands
 (deftest test-help
-  (let [commands (client/help "http://localhost:8080/help")]
+  (let [commands (client/help (client/rpc-endpoint))]
     (is (get-help-command "conj" commands))
     (is (get-help-command "mk-command" commands))
     (is (get-help-command "get-commands" commands))
@@ -34,8 +31,9 @@
 ;;test can invoke correctly.
 ;;include chinese characters and collection
 (deftest test-invoke
-  (is (= "中文测试"
-         (client/call "http://localhost:8080/invoke" "str" "中文" "测试")))
-  (is (= [1 2 3 4]
-           (client/call "http://localhost:8080/invoke" "concat" [1 2] [3 4]))))
+  (doseq [endp (map #(client/rpc-endpoint :on-wire %) ["clj" "json"])]
+    (is (= "中文测试"
+           (client/invoke-rpc endp "str" "中文" "测试")))
+    (is (= [1 2 3 4]
+           (client/invoke-rpc endp "concat" [1 2] [3 4])))))
 
