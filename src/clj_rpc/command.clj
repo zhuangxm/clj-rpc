@@ -61,3 +61,5 @@
     (let [fixed-args (map #(get-in req %) arg-paths)
           args (get req :args)]
       (apply func (concat fixed-args args)))))
+
+(def func->web (comp wrap-invoke web-func))

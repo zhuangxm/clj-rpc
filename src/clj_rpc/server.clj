@@ -30,7 +30,14 @@
 ;;use dynamic method to export commands
 (defonce commands (atom {}))
 
-(defn export-commands
+(defn export-func
+  "Export a web-func to global command map."
+  [func to-name & {:keys [doc arglists]}]
+  (let [func (command/func->web func)
+        cmd (command/->Command to-name func doc arglists)]
+    (swap! commands assoc to-name cmd)))
+
+(defn export-ns
   "export all functions or specify functions in the namespace ns
    for example :
    (export-commands 'clojure.core)
@@ -40,7 +47,8 @@
   [ns & fn-names]
   (let [ns (symbol ns)]
     (require ns)
-    (let [var-fns (map #(find-var (symbol (str ns "/" %))) fn-names)]
+    (let [var-fns (map #(->> (str ns "/" %) symbol find-var deref command/func->web)
+                       fn-names)]
       (swap! commands merge 
              (apply command/get-commands ns var-fns)))))
 
@@ -48,10 +56,10 @@
   "get the function from the command-map according the method-name and
    execute this function with args
    return the execute result"
-  [command-map method-name args]
-  (logging/debug "execute-method == method-name: " method-name " args: " args)
-  (when-let [f (command/.func (command-map method-name))]
-    (apply f args)))
+  [command-map method-name req]
+  (if-let [cmd (get command-map method-name)]
+          ((command/.func cmd) req)
+          (route/not-found "invalid command")))
 
 (defn help-commands
   "return the command list"
@@ -64,10 +72,9 @@
   (ANY "/:s-method/help" [s-method]
        (when-let [[f-encode] (protocol/serialization s-method)]
          (f-encode (help-commands @commands))))
-  (POST "/:s-method/invoke" [s-method method args]
-        (logging/debug "invoking (" s-method ") method: " method " args: " args)
-        (let [[f-encode f-decode] (protocol/serialization s-method)]
-          (f-encode (execute-method @commands method (f-decode args)))))
+  (POST "/:s-method/invoke" [s-method method :as req]
+        (logging/debug "invoking (" s-method ") method: " method " req: " req)
+        (execute-method @commands method req))
   (route/not-found "invalid url"))
 
 ;;define a jetty-instance used to start or stop
