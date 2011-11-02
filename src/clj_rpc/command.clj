@@ -1,5 +1,5 @@
-(ns clj-rpc.command)
-
+(ns clj-rpc.command
+  (:require [clj-rpc.wire-format :as protocol]))
 
 ;;abstract the concept command that can be executed by client
 ;;command include command string, command doc, command arglists
@@ -19,7 +19,6 @@
   [x]
   (try (fn? (var-get x))
        (catch Exception e)))
-
 
 (defn filter-commands
   "get all the functions as commands in the namespace ns
@@ -41,3 +40,24 @@
   ([ns & var-fns]
      (filter-commands ns (set var-fns))))
 
+(defn wrap-invoke
+  [handler]
+  (fn [{{:keys [args s-method] :or {s-method "json"}} :params :as req}]
+    (let [[f-encode f-decode] (protocol/serialization s-method)
+          args (when args (f-decode args))]
+      (-> (assoc req :args args) handler f-encode))))
+
+(defn web-func
+  "Returns a web function which transform a normal func by accept a
+   ring request map as its input. We can also curry func by optional arg-paths
+   which will take args from the request map.
+
+   For example, (web-func + [:session :number])
+   will produce a new function which get 1st argument from :number of session,
+   and other arguments from :args of parameters."
+  [func & arg-paths]
+  {:pre [(fn? func) (every? vector? arg-paths)]}
+  (fn [req]
+    (let [fixed-args (map #(get-in req %) arg-paths)
+          args (get req :args)]
+      (apply func (concat fixed-args args)))))

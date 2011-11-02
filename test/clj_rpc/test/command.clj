@@ -25,3 +25,10 @@
     (is (get s-fs "+"))
     (is (get s-fs "meta"))
     (is (not (get s-fs "-")))))
+
+(deftest test-web-func
+  (let [web+ (web-func + [:session :number])]
+    (is (= 10 (web+ {:session {:number 2} :args [3 5]})))))
+
+(deftest test-wrap-invoke
+  (is (= ((wrap-invoke (web-func +)) {:params {:args "[3, 5]"}}) "8")))
