@@ -30,44 +30,38 @@
 ;;use dynamic method to export commands
 (defonce commands (atom {}))
 
-(defn export-commands
-  "export all functions or specify functions in the namespace ns
-   for example :
-   (export-commands 'clojure.core)
-   (export-commands \"clojure.core\")
-   (export-commands 'clojure.core '+)
-   (export-commands 'clojure.core \"+\")"  
-  [ns & fn-names]
-  (let [ns (symbol ns)]
-    (require ns)
-    (let [var-fns (map #(find-var (symbol (str ns "/" %))) fn-names)]
-      (swap! commands merge 
-             (apply command/get-commands ns var-fns)))))
+(defn export-func [the-var]
+  (let [[name cmd] (command/func->web-cmd the-var)]
+    (swap! commands assoc name cmd)))
+
+(defn export-ns
+  ([ns]
+     (export-ns (constantly true)))
+  ([pred ns]
+     (swap! commands merge (into {} (command/ns-web-cmds pred ns)))))
 
 (defn execute-method
   "get the function from the command-map according the method-name and
    execute this function with args
    return the execute result"
-  [command-map method-name args]
-  (logging/debug "execute-method == method-name: " method-name " args: " args)
-  (when-let [f (command/.func (command-map method-name))]
-    (apply f args)))
+  [command-map method-name req]
+  (if-let [cmd (get command-map method-name)]
+          ((command/.func cmd) req)
+          (route/not-found "invalid command")))
 
 (defn help-commands
   "return the command list"
-  [commands]
-  (->> (vals commands)
-      (map #(dissoc % :func))
-      (sort-by #(:title %))))
+  []
+  (->> (vals @commands)
+       (map #(dissoc % :func))
+       (sort-by #(:title %))))
 
 (defroutes main-routes
-  (ANY "/:s-method/help" [s-method]
-       (when-let [[f-encode] (protocol/serialization s-method)]
-         (f-encode (help-commands @commands))))
-  (POST "/:s-method/invoke" [s-method method args]
-        (logging/debug "invoking (" s-method ") method: " method " args: " args)
-        (let [[f-encode f-decode] (protocol/serialization s-method)]
-          (f-encode (execute-method @commands method (f-decode args)))))
+  (POST "/:s-method/invoke" [s-method method :as req]
+        (logging/debug "invoking (" s-method ") method: " method " req: " req)
+        (execute-method @commands method req))
+  (ANY "/:s-method/help" req
+       (execute-method @commands "help" req))
   (route/not-found "invalid url"))
 
 ;;define a jetty-instance used to start or stop
