@@ -36,27 +36,27 @@
 
 (def func->web (comp wrap-invoke web-func))
 
-;;use dynamic method to export commands
-(defonce commands (atom {}))
-
-(defn export-func
-  "Export a web-func to global command map."
-  [the-var & new-meta]
-  (let [func (func->web (var-get the-var))
+(defn modify-func->cmd
+  "Returns a pair of [name command] where command contains a
+   f-modifier modified function."
+  [f-modifier the-var & new-meta]
+  {:pre [(fn? f-modifier) (var? the-var)]}
+  (let [func (f-modifier (var-get the-var))
         new-meta (merge (meta the-var) new-meta)
         name (str (:name new-meta))
         cmd (Command. name func (:doc new-meta) (:arglists new-meta))]
-    (swap! commands assoc name cmd)))
+    [name cmd]))
 
-(defn export-ns
-  "Export public functions in ns, can filtered by pred, which take
-   a symbol as the parameter.
+(def func->web-cmd
+  (partial modify-func->cmd func->web))
 
-   Example: (export-ns '#{+ - str} 'clojure.core)
-   will export + - str functions in clojure.core ns."
-  ([ns]
-     (export-ns (constantly true) ns))
-  ([pred ns]
-     (doseq [[var-sym the-var] (ns-publics ns)
+(defn ns-funcs
+  "Returns f-var processed functions in the ns, pred can filter the functions"
+  ([f-var pred ns]
+     (for [[var-sym the-var] (ns-publics ns)
              :when (and (var-fn? the-var) (pred var-sym))]
-       (export-func the-var))))
+       (f-var the-var))))
+
+(def ns-web-cmds
+  "Returns web-cmds in a ns"
+  (partial ns-funcs func->web-cmd))

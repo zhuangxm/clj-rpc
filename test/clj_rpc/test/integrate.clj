@@ -13,8 +13,8 @@
 (use-fixtures :once around-server)
 
 (deftest test-invoke
-  (server/export-func str "str")
-  (server/export-func concat "concat")
+  (server/export-func #'str)
+  (server/export-func #'concat)
   (doseq [endp (map #(client/rpc-endpoint :on-wire %) ["clj" "json"])]
     (is (= "中文测试"
            (client/invoke-rpc endp "str" "中文" "测试")))

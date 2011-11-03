@@ -27,6 +27,19 @@
 
 (def rpc-default-port 9876)
 
+;;use dynamic method to export commands
+(defonce commands (atom {}))
+
+(defn export-func [the-var]
+  (let [[name cmd] (command/func->web-cmd the-var)]
+    (swap! commands assoc name cmd)))
+
+(defn export-ns
+  ([ns]
+     (export-ns (constantly true)))
+  ([pred ns]
+     (swap! commands merge (into {} (command/ns-web-cmds pred ns)))))
+
 (defn execute-method
   "get the function from the command-map according the method-name and
    execute this function with args
