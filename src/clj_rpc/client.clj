@@ -27,24 +27,35 @@
   (help [endpoint]
     "Returns the list of the functions that endpoint support."))
 
-(def ^:private content-type "application/x-www-form-urlencoded; charset=UTF-8")
+(def ^:private content-type "charset=UTF-8")
 
 (defn- mk-query
   "make query object to send to endpoint."
   [f-encode method-name args]
-  (let [body (str "method=" (util/url-encode method-name)
-                   "&args=" (util/url-encode (f-encode args)))]
+  (let [body (f-encode {:method method-name :params args}) ]
     {:body body :content-type content-type}))
+
+(defn get-response-value
+  "get response key value ,either keywork or string"
+  [m key]
+  (or (get m key) (get m (name key))))
 
 (defn- remote-call
   "invoke a method with args using http"
   [endpoint-url f-read f-write  method-name args]
-  (let [query (mk-query f-write method-name args)]
-    (logging/debug "query:" query)
-    (->> query
+  (let [query (mk-query f-write method-name args)
+        response (->> query
          (http/post endpoint-url)
          :body
-         (f-read))))
+         (f-read))
+        error (get-response-value response :error)]
+    (logging/debug "query:" query " response:" response)
+    (if (not error)
+      (get-response-value response :result)
+      (throw (RuntimeException. (str  "error cdoe : "
+                                      (get-response-value error :code)
+                                      " message: "
+                                      (get-response-value error :message)))))))
 
 (defn- remote-help
   "get all the commands of the server support

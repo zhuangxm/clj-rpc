@@ -23,7 +23,8 @@
             [clj-rpc.command :as command]
             [clojure.tools.logging :as logging]
             [cheshire.core :as json]
-            [clj-rpc.wire-format :as protocol]))
+            [clj-rpc.wire-format :as protocol]
+            [clj-rpc.rpc :as rpc]))
 
 (def rpc-default-port 9876)
 
@@ -44,14 +45,15 @@
       (swap! commands merge 
              (apply command/get-commands ns var-fns)))))
 
-(defn execute-method
+(defn execute-command
   "get the function from the command-map according the method-name and
    execute this function with args
    return the execute result"
-  [command-map method-name args]
-  (logging/debug "execute-method == method-name: " method-name " args: " args)
-  (when-let [f (command/.func (command-map method-name))]
-    (apply f args)))
+  [command-map {:keys [method params id]}]
+  (logging/debug "execute-command == method-name: "
+                 method " params: " params " id: " id)
+  (let [f (command/.func (command-map method))]
+    (rpc/execute-method f params id)))
 
 (defn help-commands
   "return the command list"
@@ -60,14 +62,27 @@
       (map #(dissoc % :func))
       (sort-by #(:title %))))
 
+(defn change-str->keyword
+  [m]
+  (into {} (map (fn [[key value]] [(keyword key) value]) m)))
+
+(defn rpc-invoke
+  "invoke rpc method
+   rpc-request can a map (one invoke) or a collection of map (multi invokes)"
+  [command-map rpc-request]
+  (if (map? rpc-request)
+    (execute-command command-map (change-str->keyword rpc-request))
+    (map #(execute-command command-map (change-str->keyword %)) rpc-request)))
+
 (defroutes main-routes
   (ANY "/:s-method/help" [s-method]
        (when-let [[f-encode] (protocol/serialization s-method)]
          (f-encode (help-commands @commands))))
-  (POST "/:s-method/invoke" [s-method method args]
-        (logging/debug "invoking (" s-method ") method: " method " args: " args)
-        (let [[f-encode f-decode] (protocol/serialization s-method)]
-          (f-encode (execute-method @commands method (f-decode args)))))
+  (POST "/:s-method/invoke" [s-method :as {body :body}]
+        (let [rpc-request (slurp body)]
+          (logging/debug "invoking (" s-method ") request: " rpc-request)
+          (let [[f-encode f-decode] (protocol/serialization s-method)]
+            (f-encode (rpc-invoke @commands (f-decode rpc-request))))))
   (route/not-found "invalid url"))
 
 ;;define a jetty-instance used to start or stop
