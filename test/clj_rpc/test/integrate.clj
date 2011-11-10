@@ -37,3 +37,9 @@
     (is (= [1 2 3 4]
            (client/invoke-rpc endp "concat" [1 2] [3 4])))))
 
+
+(deftest test-multi-invoke
+  (doseq [endp (map #(client/rpc-endpoint :on-wire %) ["clj" "json"])]
+    (is (= ["中文测试" [1 2 3 4]]
+             (client/multi-invoke-rpc endp "str" ["中文" "测试"]
+                                  "concat" [[1 2] [3 4]])))))
