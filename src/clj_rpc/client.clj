@@ -23,36 +23,25 @@
             [clj-rpc [wire-format :as protocol] [server :as server]]
             [clojure.tools.logging :as logging]))
 
+
+;;define a method request structure
+(defstruct str-method-request :method :params)
+
 (defprotocol RpcEndpoint
-  (invoke [endpoint func-name args]
+  (invoke [endpoint method-request token]
     "Invoke functions with name func-name with arguments args on endpoint,
-     notice because protocols do not support varargs, a more convinient way
-     is using invoke-rpc function instead.")
-  (multi-invoke [endpoint invokes]
-     "Invoke mutli functions with name func-name with arguments args on endpoint,
-     the invokes must a collection of func-name args like [fun1 arg1 fun2 arg2]
-     notice because protocols do not support varargs, a more convinient way
-     is using multi-invoke-rpc function instead.")
+    parameter method-request can be a method-request  structure like
+         {:methd-name \"str\" :params [\"hello\" \"world\"]}
+         or a collection of method-request.")
   (help [endpoint]
     "Returns the list of the functions that endpoint support."))
 
 (def ^:private content-type "charset=UTF-8")
 
-(defn- mk-query-body
-  "make http invoke body.
-   the body has two kinds
-   1. a map means a single invoke.
-   2. a collection means multi invokes."
-  [method-name args & method-args]
-  (if (seq method-args)
-    (map (fn [[meth ps]] {:method meth :params ps})
-         (partition 2 2 (concat [method-name args] method-args)))
-    {:method method-name :params args}))
-
 (defn- mk-query
   "make query object to send to endpoint."
-  [f-encode method-name args & method-args]
-  (let [body (f-encode (apply mk-query-body method-name args method-args)) ]
+  [f-encode method-request]
+  (let [body (f-encode method-request) ]
     {:body body :content-type content-type}))
 
 (defn get-response-value
@@ -82,13 +71,13 @@
 
 (defn- remote-call
   "invoke a method with args using http"
-  [endpoint-url f-read f-write  method-name args & method-args]
-  (let [query (apply mk-query f-write method-name args method-args)
+  [endpoint-url f-read f-write  invoke-request]
+  (let [query (mk-query f-write invoke-request)
         response (->> query
          (http/post endpoint-url)
          :body
          (f-read))]
-    (logging/debug "query:" query " response:" response)
+    (logging/debug "url:" endpoint-url " query:" query " response:" response)
     (get-invoke-result response)))
 
 (defn- remote-help
@@ -100,6 +89,10 @@
       :body
       (f-read)))
 
+(defn- invoke-url [url token]
+  (let [url (str url "/invoke")]
+    (if token (str url "?token=" token) url)))
+
 (defn rpc-endpoint
   "Returns the endpoint to execute RPC functions."
   [& {:keys [server port on-wire]
@@ -109,23 +102,31 @@
   (when-let [[f-encode f-decode] (protocol/serialization on-wire)]
     (let [url (format "http://%s:%d/%s" server port on-wire)]
       (reify RpcEndpoint
-        (invoke [endpoint method-name args]
-            (remote-call (str url "/invoke") f-decode f-encode method-name args))
-        (multi-invoke [endpoint invokes]
-            (apply remote-call
-                   (str url "/invoke") f-decode f-encode invokes))
+        (invoke [endpoint token method-request]
+          (remote-call (invoke-url url token)
+                       f-decode f-encode method-request))
         (help [_]
               (remote-help (str url "/help") f-decode))))))
 
-(defn invoke-rpc
+(defn invoke-rpc-with-token
   "Invoke remote func-name on endpoint with args.
-  example: (invoke-rpc func1 arg1 arg2 ...)"
-  [endpoint func-name & args]
-  (invoke endpoint func-name args))
+  example: (invoke-rpc-with-token token func1 [arg1 arg2 ...] func2 [arg ...])
+  if only one request return only one result,
+  otherwise return collection of result"
+  [endpoint token method-name args & func-args]
+  (let [method-request 
+        (if (seq func-args)
+          (map #(apply struct str-method-request %)
+               (partition 2 2 (concat [method-name args] func-args)))
+          (struct str-method-request method-name args))]
+    (invoke endpoint token method-request)))
 
-(defn multi-invoke-rpc
-  "Invoke multi remote func-name on endpoint with args.
-  args must be a collection
-  example: (multi-invoke-rpc fun1 [arg1 arg2 ...] func2 [arg1 arg2 ...]])"
-  [endpoint & func-args]
-  (multi-invoke endpoint func-args))
+(defn invoke-rpc
+  "Invoke one or more remote func-name on endpoint with args.
+  example: (invoke-rpc fun1 [arg1 arg2 ...] func2 [arg1 arg2 ...]])
+  if only one request return only one result,
+  otherwise return collection of result"
+  [endpoint method-name args & func-args]
+  (apply invoke-rpc-with-token endpoint nil method-name args func-args))
+
+

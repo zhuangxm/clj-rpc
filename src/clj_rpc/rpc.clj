@@ -8,14 +8,18 @@
    :invalid-request  "an invalid Request object."
    :method-not-found "The method does not exist / is not available."
    :invalid-params   "Invalid method parameter(s)."
-   :internal-error   "Internal error."})
+   :internal-error   "Internal error."
+   :unauthorized     "unauthorized user or action"
+   :undefine         "undefine error, please check the server code"})
 
 (def error-codes
   {:parse-error      -32700
    :invalid-request  -32600
    :method-not-found -32601
    :invalid-params   -32602
-   :internal-error   -32603})
+   :internal-error   -32603
+   :unauthorized     401
+   :undefine         404})
 
 
 (defn mk-response
@@ -26,8 +30,7 @@
 (defn mk-error
   "generate error message"
   [code id &[msg data]]
-  {:jsonrpc "2.0"
-   :error {:code (error-codes code)
+  {:error {:code (or (error-codes code) :undefine)
            :message (or msg (error-msgs code))
            :data (or data "")}
    :id id})
