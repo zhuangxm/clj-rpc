@@ -9,29 +9,34 @@ rule:
 
 if use clj protocol
 f-encode/f-decode => pr-str/read-string
+
 if use json protocol (using cheshire json)
 f-encode/f-decode => generate-string/parse-string  
 
 ## request and response.
-clj-rpc supports single invoke rpc and multi invoke prc.
-the request and response using json-rpc alike message
-request and reply messages both are put in http body. using utf-8 encoding.
+* clj-rpc supports single invoke rpc and multi invoke prc.
+* the request and response using json-rpc alike message
+* request and reply messages both are put in http body. using utf-8 encoding.
 
 ### single invoke
-request : 
-  {:method method-name :params [param1 param2 ...] :id request-id}
-response: (when error is nil then the rpc invoke is successful,
+* request : 
+ 
+    {:method method-name :params [param1 param2 ...] :id request-id}
+
+* response: (when error is nil then the rpc invoke is successful,
           otherwise fail)
-  {:result execute-result :id request-id :error {:code 401 :message
+
+    {:result execute-result :id request-id :error {:code 401 :message
   "some message" :data other-data-related-error}}
 
 ### multi invoke 
-requests : [request1 request2 ...]
-response : [response1 response2 ...]
+* requests : [request1 request2 ...]
+* response : [response1 response2 ...]
 
 ## url
 the http url format like
-http://host:port/{clj|json}/invoke?token=client-token
+
+  http://host:port/{clj|json}/invoke?token=client-token
 
 token: this is optional, the meaning of token will be explained below.
 
@@ -52,7 +57,8 @@ example:
 ```
 
 this example mean we export a function + - of the clojure.core
-but the client must supply a token that can get context, and
+
+And the client must supply a token that can get context, and
 the (get-in context [:username]) must equal the first parameter of
 invoke.
 
@@ -60,9 +66,9 @@ The context token and params check will explain below.
 
 ## context and params check
 
-clj-rpc server will use a token to identify the client. 
-every token specify a unique client.
-Token can be passed to server by query token parameter or cookie.
+* clj-rpc server will use a token to identify the client. 
+* every token specify a unique client.
+* Token can be passed to server by query token parameter or cookie.
 
 When we start a clj-rpc server we can sepcific get-context function,
 that is a function that can get context of the client by the token. like
@@ -73,7 +79,8 @@ according to the context that we can get by the client token.
 
 Examples:
 
-We have export commands like above in the section export commands
+Provided we have exported commands like above in the section export commands
+
 we have a get-context function like below,
 
 ```clojure 
@@ -82,13 +89,16 @@ we have a get-context function like below,
 ```
 
 If we remote invoke function like (+ 1 3) with token3,
+
 then we will get a error, because token3 can not get a context.
 
 and if we invoke function like (+ 2 3) with token1
+
 then we will get a error two. 
 because (not= 2 (get-in [:number1] {:number1 1}))
 
 and if we invoke function like (+ 1 3) with token1, 
+
 then we will get a correct answer 4.
  
 ## Usage 
