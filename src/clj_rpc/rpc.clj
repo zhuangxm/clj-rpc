@@ -3,6 +3,9 @@
 
 ;;defind rpc message format, refering json-rpc definition
 
+;;error-msg and error-codes original come from
+;;https://github.com/matiaslb/jsonrpc4c
+;;thanks matiaslb
 (def error-msgs
   {:parse-error      "parse protocol error"
    :invalid-request  "an invalid Request object."

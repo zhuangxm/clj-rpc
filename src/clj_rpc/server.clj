@@ -91,9 +91,12 @@
   "invoke rpc method
    rpc-request can a map (one invoke) or a collection of map (multi invokes)"
   [command-map context rpc-request]
-  (if (map? rpc-request)
-    (execute-command command-map context (change-str->keyword rpc-request))
-    (map #(execute-command command-map context (change-str->keyword %)) rpc-request)))
+  (letfn [(fn-execute [r]
+             (execute-command command-map context
+                              (change-str->keyword r)))]
+    (if (map? rpc-request)
+      (fn-execute rpc-request)
+      (map fn-execute rpc-request))))
 
 (defroutes main-routes
   (ANY "/:s-method/help" [s-method]
