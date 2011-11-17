@@ -123,6 +123,7 @@
   (handler/site
    (context/wrap-context  main-routes
                           (:fn-get-context options)
+                          (:cookie-attrs options)
                           (:token-cookie-key options))))
 
 (defn start
@@ -131,7 +132,9 @@
       base on options of run-jetty  of ring jetty adaptor
       and add two more
       :fn-get-context  => function to get the context (fn-get-context token)
-      :token-cookie-key => the cookie name according to the token"
+      :token-cookie-key => the cookie name according to the token
+      :cookie-attrs => the cookie default attributes, include domain or others
+                       reference ring wrap-session"
   ([]
      (start {:join? false :port rpc-default-port :host "127.0.0.1"} ))
   ([options]

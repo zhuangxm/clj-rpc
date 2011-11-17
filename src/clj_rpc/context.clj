@@ -1,17 +1,24 @@
 (ns clj-rpc.context
-  (:require [ring.middleware.cookies :as cookies]))
+  (:require [ring.middleware.cookies :as cookies]
+            [clj-rpc.user-data :as data]))
 
 (defn wrap-context
   "accoding to the token
      (come from cookie in the http request or the token parameters)
    to get the context data , insert into the request"
-  [handler fn-get-context cookie-key]
+  [handler fn-get-context cookie-attrs cookie-key]
   (cookies/wrap-cookies 
    (fn [request]
      (let [token (or (get-in request [:params :token])
-                     (get-in request [:cookies cookie-key]))
+                     (get-in request [:cookies cookie-key :value]))
            context (if (and token fn-get-context) (fn-get-context token))]
-       (handler (assoc request :context context)) ))))
+       (binding [data/*atom-token* (atom token)]
+         (let [response (handler (assoc request :context context))]
+           (if (and (not= token @data/*atom-token* token))
+             (assoc response :cooikes {cookie-key
+                                       (merge {:path "/"} cookie-attrs
+                                              {:value @data/*atom-token*})})
+             response))) ))))
 
 (defn add-context
   "add context to specific command
