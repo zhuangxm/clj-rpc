@@ -150,7 +150,7 @@ sample code:
  (client/invoke-rpc endp "str" ["hello, " "world"])
 
  ;;invoke the user-info function correctly.
- (client/invoke-rpc endp "token1" "user-info" ["user1"])  
+ (client/invoke-rpc-with-token endp "token1" "user-info" ["user1"])  
 
 ```
 
