@@ -25,11 +25,11 @@
   "存储用户数据，如果原来没有token，那么创建一个新的token"
   [data]
   (do (if (not @*atom-token*) (reset! *atom-token* (uuid)) )
-      (swap! atom-user-datas @*atom-token* data )))
+      (swap! atom-user-datas assoc @*atom-token* data )))
 
 (defn delete-user-data!
   "删除用户相关数据"
-  [data]
+  []
   (swap! atom-user-datas dissoc @*atom-token*))
 
 ;;TODO 增加用户数据定期清理
