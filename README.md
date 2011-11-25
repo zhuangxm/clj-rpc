@@ -100,7 +100,44 @@ because (not= 2 (get-in [:number1] {:number1 1}))
 and if we invoke function like (+ 1 3) with token1, 
 
 then we will get a correct answer 4.
- 
+
+## user data
+
+Sometime , we need to access data (like session) related the connection.
+
+Because this is a rpc invoke procedure, so when programmer wirtes
+functions we assume them do not and we do not want them to know anything
+about session in order to seperate the logic code and web framework. 
+
+So clj-rpc.user-data supplies three functions to let programmer can
+access connection related data.
+
+* (save-user-data! data) 
+* (get-user-data!) 
+* (delete-user-data)
+
+Notice: this three functions should be used in the function that will
+be exported. 
+
+```clojure
+(ns rpc.demo
+  (:require [clj-rpc.user-data :as store]))
+
+;;example function to using save-user-data!
+(defn fn-save-data 
+  []
+  (store/save-user-data! {:save-time (System/currentTimeMillis)}))
+
+;;example function to using get-user-data!
+(defn fn-get-data
+  []
+  (store/get-user-data!))
+
+;;example function to using delete-user-data!
+(defn fn-delete-data
+  []
+  (store/delete-user-data!))
+``` 
 ## Usage 
 
 add to porject.clj

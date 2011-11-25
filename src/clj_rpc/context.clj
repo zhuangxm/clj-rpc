@@ -15,7 +15,7 @@
        (binding [data/*atom-token* (atom token)]
          (let [response (handler (assoc request :context context))]
            (if (and (not= token @data/*atom-token* token))
-             (assoc response :cooikes {cookie-key
+             (assoc response :cookies {cookie-key
                                        (merge {:path "/"} cookie-attrs
                                               {:value @data/*atom-token*})})
              response))) ))))
