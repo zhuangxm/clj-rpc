@@ -38,7 +38,7 @@
 
 (def ^:private content-type "charset=UTF-8")
 
-(defn- mk-query
+(defn mk-query
   "make query object to send to endpoint."
   [f-encode method-request]
   (let [body (f-encode method-request) ]
