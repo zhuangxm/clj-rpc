@@ -1,5 +1,7 @@
 # clj-rpc
 
+Version 0.2.0 Release.
+
 A simple clojure rpc using clojure protocol 
 
 all the arguments of the function and the result must statify the
@@ -143,7 +145,7 @@ be exported.
 add to porject.clj
 
 ```clojure
-[clj-rpc "0.1.0"]
+[clj-rpc "0.2.0"]
 ```
 
 sample code:
