@@ -38,7 +38,7 @@ f-encode/f-decode => generate-string/parse-string
 ## url
 the http url format like
 
-  http://host:port/{clj|json}/invoke?token=client-token
+  http://host:port/[clj | json]/invoke?token=client-token
 
 token: this is optional, the meaning of token will be explained below.
 
