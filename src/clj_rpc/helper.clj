@@ -19,19 +19,19 @@
   (get-in result [:cookies cookie-key :value]))
 
 (defn- mk-client
-  [on-wiire & [cookie-key]]
-  (let [endpoint (client/rpc-endpoint)
-        cookie (atom nil)]
-    (fn [method-name args & func-args]
-      (binding [client/post-request
-                (fn [query url]
+  [on-wire & [cookie-key]]
+  (let [cookie (atom nil)
+        fn-post-request (fn [query url]
                   (let [result (http/post query url)
                         cv (get-http-result-cookie-value result cookie-key)]
                     (do
                       (if cv (reset! cookie cv))
-                      result)))]
-        (apply client/invoke-rpc-with-token endpoint
-          @cookie method-name args func-args)))))
+                      result)))
+        endpoint (client/rpc-endpoint :on-wire on-wire
+                                      :fn-post-request fn-post-request)]
+    (fn [method-name args & func-args]
+      (apply client/invoke-rpc-with-token endpoint
+             @cookie method-name args func-args))))
 
 (def mk-clj-client (partial mk-client "clj"))
 

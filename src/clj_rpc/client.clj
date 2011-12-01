@@ -69,18 +69,12 @@
     (get-single-invoke-result response)
     (map get-single-invoke-result response)))
 
-(defn ^:dynamic post-request
-  "supply a method that can be dynamic binding , convenient to test
-   TODO: looks ugly, any suggestion?"
-  [query url]
-  (http/post query url))
-
 (defn- remote-call
   "invoke a method with args using http"
-  [endpoint-url f-read f-write  invoke-request]
+  [endpoint-url fn-post-request f-read f-write  invoke-request]
   (let [query (mk-query f-write invoke-request)
         response (->> query
-         (post-request endpoint-url)
+         (fn-post-request endpoint-url)
          :body
          (f-read))]
     (logging/debug "url:" endpoint-url " query:" query " response:" response)
@@ -101,15 +95,16 @@
 
 (defn rpc-endpoint
   "Returns the endpoint to execute RPC functions."
-  [& {:keys [server port on-wire]
+  [& {:keys [server port on-wire fn-post-request]
       :or {server "localhost"
-           port server/rpc-default-port on-wire "clj"}}]
+           port server/rpc-default-port on-wire "clj"
+           fn-post-request http/post}}]
   {:pre [(string? server) (< 1024 port 65535) (string? on-wire)]}
   (when-let [[f-encode f-decode] (protocol/serialization on-wire)]
     (let [url (format "http://%s:%d/%s" server port on-wire)]
       (reify RpcEndpoint
         (invoke [endpoint token method-request]
-          (remote-call (invoke-url url token)
+          (remote-call (invoke-url url token) fn-post-request
                        f-decode f-encode method-request))
         (help [_]
               (remote-help (str url "/help") f-decode))))))
