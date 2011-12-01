@@ -69,12 +69,18 @@
     (get-single-invoke-result response)
     (map get-single-invoke-result response)))
 
+(defn ^:dynamic post-request
+  "supply a method that can be dynamic binding , convenient to test
+   TODO: looks ugly, any suggestion?"
+  [query url]
+  (http/post query url))
+
 (defn- remote-call
   "invoke a method with args using http"
   [endpoint-url f-read f-write  invoke-request]
   (let [query (mk-query f-write invoke-request)
         response (->> query
-         (http/post endpoint-url)
+         (post-request endpoint-url)
          :body
          (f-read))]
     (logging/debug "url:" endpoint-url " query:" query " response:" response)
@@ -128,5 +134,3 @@
   otherwise return collection of result"
   [endpoint method-name args & func-args]
   (apply invoke-rpc-with-token endpoint nil method-name args func-args))
-
-
