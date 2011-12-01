@@ -71,10 +71,10 @@
 
 (defn- remote-call
   "invoke a method with args using http"
-  [endpoint-url f-read f-write  invoke-request]
+  [endpoint-url fn-post-request f-read f-write  invoke-request]
   (let [query (mk-query f-write invoke-request)
         response (->> query
-         (http/post endpoint-url)
+         (fn-post-request endpoint-url)
          :body
          (f-read))]
     (logging/debug "url:" endpoint-url " query:" query " response:" response)
@@ -95,15 +95,16 @@
 
 (defn rpc-endpoint
   "Returns the endpoint to execute RPC functions."
-  [& {:keys [server port on-wire]
+  [& {:keys [server port on-wire fn-post-request]
       :or {server "localhost"
-           port server/rpc-default-port on-wire "clj"}}]
+           port server/rpc-default-port on-wire "clj"
+           fn-post-request http/post}}]
   {:pre [(string? server) (< 1024 port 65535) (string? on-wire)]}
   (when-let [[f-encode f-decode] (protocol/serialization on-wire)]
     (let [url (format "http://%s:%d/%s" server port on-wire)]
       (reify RpcEndpoint
         (invoke [endpoint token method-request]
-          (remote-call (invoke-url url token)
+          (remote-call (invoke-url url token) fn-post-request
                        f-decode f-encode method-request))
         (help [_]
               (remote-help (str url "/help") f-decode))))))
@@ -128,5 +129,3 @@
   otherwise return collection of result"
   [endpoint method-name args & func-args]
   (apply invoke-rpc-with-token endpoint nil method-name args func-args))
-
-
