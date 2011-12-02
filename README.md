@@ -1,6 +1,8 @@
 # clj-rpc
 
-Version 0.2.0 Release.
+Version 0.2.1 Release.
+
+Add helper.clj to support intergrate test.
 
 A simple clojure rpc using clojure protocol 
 
