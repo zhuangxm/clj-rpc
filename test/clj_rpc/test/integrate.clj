@@ -142,6 +142,6 @@
       ;;different cookie doesn't disturbe each other
       (invoke-and-get-result query-get cookie) => (contains {"result"  "333"})
       ;;can delete user data
-      (invoke-and-get-result query-delete cookie) => (contains {"result" {}})
+      (invoke-and-get-result query-delete cookie) => (contains {"result" nil})
       ;;can not get data when the user data has been deleted.
       (invoke-and-get-result query-get cookie) => (contains {"result" nil}))))

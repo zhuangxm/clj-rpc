@@ -114,9 +114,9 @@ about session in order to seperate the logic code and web framework.
 So clj-rpc.user-data supplies three functions to let programmer can
 access connection related data.
 
-* (save-user-data! data) 
+* (save-user-data! data) return data 
 * (get-user-data!) 
-* (delete-user-data)
+* (delete-user-data) return nil
 
 Notice: this three functions should be used in the function that will
 be exported. 
