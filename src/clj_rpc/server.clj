@@ -66,12 +66,13 @@
   "get the function from the command-map according the method-name and
    execute this function with args
    return the execute result"
-  [command-map context {:keys [method params id]}]
+  [command-map request context {:keys [method params id]}]
   (logging/debug "execute-command == method-name: "
                  method " params: " params " id: " id)
   (let [cmd (command-map method)
         f (and cmd (command/.func cmd))
-        check-result (context/check-context cmd context params)]
+        check-result (context/check-context cmd context params)
+        params (context/inject-params cmd request params)]
     (if check-result
       (rpc/mk-error (:code check-result) id (:message check-result))
       (rpc/execute-method f params id))))
@@ -90,9 +91,9 @@
 (defn rpc-invoke
   "invoke rpc method
    rpc-request can a map (one invoke) or a collection of map (multi invokes)"
-  [command-map context rpc-request]
+  [command-map request rpc-request]
   (letfn [(fn-execute [r]
-             (execute-command command-map context
+             (execute-command command-map request (:context request)
                               (change-str->keyword r)))]
     (if (map? rpc-request)
       (fn-execute rpc-request)
@@ -102,11 +103,11 @@
   (ANY "/:s-method/help" [s-method]
        (when-let [[f-encode] (protocol/serialization s-method)]
          (f-encode (help-commands @commands))))
-  (POST "/:s-method/invoke" [s-method :as {context :context body :body}]
-        (let [rpc-request (slurp body)]
+  (POST "/:s-method/invoke" [s-method :as reqeust]
+        (let [rpc-request (slurp (:body reqeust))]
           (logging/debug "invoking (" s-method ") request: " rpc-request)
           (let [[f-encode f-decode] (protocol/serialization s-method)]
-            (f-encode (rpc-invoke @commands context (f-decode rpc-request))))))
+            (f-encode (rpc-invoke @commands reqeust (f-decode rpc-request))))))
   (route/not-found "invalid url"))
 
 ;;define a jetty-instance used to start or stop
@@ -120,11 +121,12 @@
   (reset! jetty-instance nil))
 
 (defn build-hander [options]
-  (handler/site
-   (context/wrap-context  main-routes
-                          (:fn-get-context options)
-                          (:cookie-attrs options)
-                          (:token-cookie-key options))))
+  (-> main-routes
+      (context/wrap-context (:fn-get-context options)
+                            (:cookie-attrs options)
+                            (:token-cookie-key options))
+      (context/wrap-client-ip)
+      handler/site))
 
 (defn start
   "start jetty server
