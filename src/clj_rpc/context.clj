@@ -95,5 +95,5 @@
   "inject the params from request needed by the command into the actual params"
   [command request params]
   (if-let [ps (:params-inject command)]
-    (cons (map #(get-in request %) ps) params)
+    (concat (map #(get-in request %) ps) params)
     params))
