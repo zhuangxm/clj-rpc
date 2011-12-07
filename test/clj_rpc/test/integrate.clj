@@ -36,7 +36,7 @@
   (server/export-commands 'clojure.core nil)
   (server/export-commands "clj-rpc.command" ['mk-command "get-commands"])
   (server/export-commands "clj-rpc.test.integrate" ['fn-with-context-check]
-                          {:require-context true :params-checks {0 [:username]} })
+                          {:require-context true :params-check {0 [:username]} })
   (server/export-commands 'clj-rpc.test.integrate
                           ['fn-save-data 'fn-get-data 'fn-delete-data]))
 

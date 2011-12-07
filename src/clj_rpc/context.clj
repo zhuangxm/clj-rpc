@@ -3,6 +3,9 @@
             [clj-rpc.user-data :as data]))
 
 
+;;the options availbe to context
+(def context-options [:require-context :params-check :params-inject])
+
 (defn wrap-client-ip
   "let :remote-addr represents the real client ip even though
    the client connects through a proxy server"
@@ -50,6 +53,7 @@
        if client invoke (fun param1 param2) then the acutally invoke will be like
        (fun client-ip server-name param1 param2)"
   [command options]
+  {:pre [ (every? #(% (set context-options)) (keys options))]}
   (merge command options))
 
 (defn add-context-to-command-map
@@ -58,42 +62,73 @@
   [command-map options]
   (into {} (map (fn [[k v]] [k (add-context v options)]) command-map)))
 
-(defn- check-authorization
-  "return nil if the command don't need authrization or
-   the context include the authorization information
-   else return {:code :unauthorized}"
-  [context command]
-  (when (and (get command :require-context)
-             (not (seq context)))
-    {:code :unauthorized}))
+(defn error-method-request?
+  "return true if method-reqeust error
+  else false"
+  [method-request]
+  (boolean (or (:code method-request)
+               (:message method-request))))
 
-(defn- check-params
-  "return nil
-      if the params of the command satisfy the requirement of the command
-      provided specific context
-   else return {:code invalid-params :message error-message}"
-  [context command command-params]
-  (letfn [(fn-check [[k v]]
-            (if (not= (nth command-params k) (get-in context v))
+(defmulti pre-handle-method-request
+  "pre handle method request
+   return new method-request if successful
+   else return error like {:code error-code :message error-message}"
+  (fn [option-key option request method-request]
+    (if (not (error-method-request? method-request))
+      option-key
+      :default)))
+
+;;pre handle :require-context option
+;;return method-request if the command don't need authrization or
+;;the context include the authorization information
+;;else return {:code :unauthorized}
+(defmethod pre-handle-method-request :require-context
+  [_ option request method-request]
+  (let [context (get request :context)]
+    (if (and option
+             (not (seq context)))
+      {:code :unauthorized}
+      method-request)))
+
+;;pre handle :params-check
+;;return method-request if the params of the command satisfy
+;;the requirement of the command provided specific context
+;;else return {:code invalid-params :message error-message}
+(defmethod pre-handle-method-request :params-check
+  [_ option request method-request]
+  (let [context (get request :context)
+        params (:params method-request)
+        fn-check
+        (fn [[k v]]
+            (if (not= (nth params k) (get-in context v))
               {:code :invalid-params
-               :message (str "the " k "th param must be " (get-in context v ))} ))]
-    (->> (:params-checks command)
-         (map fn-check )
-         (filter identity)
-         first)))
+               :message (str "the " k "th param must be " (get-in context v))}))]
+    (or (->> option
+             (map fn-check )
+             (filter identity)
+             first)
+        method-request)))
+
+;;pre handle :params-inject
+;;inject the params from request needed by the command
+;;into the actualparams
+;;return the new method-request
+(defmethod pre-handle-method-request :params-inject
+  [_ option request method-request]
+  (if option
+    (update-in method-request [:params]
+               #(concat (map (partial get-in request) option) %))
+    method-request))
+
+;;default return origin method-request
+(defmethod pre-handle-method-request :default
+  [_ option request method-request]
+  method-request)
 
 (defn check-context
-  "check whether the command and params statisfy the requirement
-   if success return nil
-   else return {:code error-code :message error-message}
-   error-code refer to clj-rpc.rpc.clj"
-  [command context params]
-  (or (check-authorization context command)
-      (check-params context command params)))
-
-(defn inject-params
-  "inject the params from request needed by the command into the actual params"
-  [command request params]
-  (if-let [ps (:params-inject command)]
-    (concat (map #(get-in request %) ps) params)
-    params))
+  "handle options of the command by order
+   and return  new method-request or error message"
+  [cmd request method-request]
+  (reduce (fn [m-r k] (pre-handle-method-request k (get cmd k) request m-r))
+          method-request
+          context-options))

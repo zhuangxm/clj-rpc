@@ -66,16 +66,16 @@
   "get the function from the command-map according the method-name and
    execute this function with args
    return the execute result"
-  [command-map request context {:keys [method params id]}]
-  (logging/debug "execute-command == method-name: "
-                 method " params: " params " id: " id)
-  (let [cmd (command-map method)
+  [command-map request method-request]
+  (logging/debug "execute-command == " method-request)
+  (let [id (:id method-request)
+        cmd (command-map (:method method-request))
         f (and cmd (command/.func cmd))
-        check-result (context/check-context cmd context params)
-        params (context/inject-params cmd request params)]
-    (if check-result
-      (rpc/mk-error (:code check-result) id (:message check-result))
-      (rpc/execute-method f params id))))
+        new-method-request (context/check-context cmd request method-request)]
+    (if (context/error-method-request? new-method-request)
+      (rpc/mk-error (:code new-method-request) id
+                    (:message new-method-request))
+      (rpc/execute-method f (:params new-method-request) id))))
 
 (defn help-commands
   "return the command list"
@@ -93,7 +93,7 @@
    rpc-request can a map (one invoke) or a collection of map (multi invokes)"
   [command-map request rpc-request]
   (letfn [(fn-execute [r]
-             (execute-command command-map request (:context request)
+             (execute-command command-map request
                               (change-str->keyword r)))]
     (if (map? rpc-request)
       (fn-execute rpc-request)
