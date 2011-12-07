@@ -34,3 +34,10 @@
     ;;do not require context check
     (check-context cmd-not-require nil {:method "method" :params ["str1" "str2"]})
     => {:method "method" :params ["str1" "str2"]}))
+
+(facts "test inject parasm"
+  (let [cmd (->  (command/mk-command "str" #'str)
+                 (add-context {:params-inject [ [:remote-addr] [:inject]]})) ]
+    (check-context cmd {:remote-addr "192.168.1.1" :inject "inject-param2"}
+                   {:method "method" :params ["p1" "p2"]})
+    => {:method "method" :params ["192.168.1.1" "inject-param2" "p1" "p2"]}))

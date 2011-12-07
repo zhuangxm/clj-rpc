@@ -37,6 +37,8 @@
   (server/export-commands "clj-rpc.command" ['mk-command "get-commands"])
   (server/export-commands "clj-rpc.test.integrate" ['fn-with-context-check]
                           {:require-context true :params-check {0 [:username]} })
+  (server/export-commands 'clojure.core ['str]
+                          {:params-inject [ [:remote-addr]]})
   (server/export-commands 'clj-rpc.test.integrate
                           ['fn-save-data 'fn-get-data 'fn-delete-data]))
 
@@ -70,14 +72,14 @@
 ;;include chinese characters and collection
 (deftest test-invoke
   (doseq [endp (map #(client/rpc-endpoint :on-wire %) ["clj" "json"])]
-    (is (= "中文测试"
+    (is (= "127.0.0.1中文测试"
            (client/invoke-rpc endp "str" ["中文" "测试"])))
     (is (= [1 2 3 4]
            (client/invoke-rpc endp "concat" [ [1 2] [3 4] ])))))
 
 (deftest test-multi-invoke
   (doseq [endp (map #(client/rpc-endpoint :on-wire %) ["clj" "json"])]
-    (is (= ["中文测试" [1 2 3 4]]
+    (is (= ["127.0.0.1中文测试" [1 2 3 4]]
              (client/invoke-rpc endp "str" ["中文" "测试"]
                                   "concat" [[1 2] [3 4]])))))
 

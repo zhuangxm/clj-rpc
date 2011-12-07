@@ -105,6 +105,35 @@ and if we invoke function like (+ 1 3) with token1,
 
 then we will get a correct answer 4.
 
+## inject invoke parameter
+
+Sometime, some parameters that method need (like client-ip) that the
+web client can not get. we can dynamic inject this kind of parameters
+(from ring request) into method.
+
+the export-commands support options like 
+{:params-inject [ [:remote-addr] [:header "host]]}
+
+and clj-rpc will (get-in request [:remote-addr]) and (get-in request
+[:header "host"]) as the first and second parameter of the method that
+client invokes.
+
+Example: 
+```clojure
+(defn fn-do-someting [client-ip username]
+      ... )
+
+(export-commands 'mynamespace ["fn-do-something"]
+                 {:params-inject [ [:remote-addr] ]})
+```
+
+Then the client will invoke function like (fn-do-something usernmae)
+and the clj-rpc will dynamic invoke like (fn-do-something "127.0.0.1"
+username)
+ 
+Notice: Now, clj-rpc only supprots to inject params into the front of the
+parameters that client supplied .
+  
 ## user data
 
 Sometime , we need to access data (like session) related the connection.
