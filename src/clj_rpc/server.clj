@@ -38,7 +38,10 @@
   "export all functions (fn-names is null or empty)
    or specify functions in the namespace ns
    invoker of this method must notice the order of the options
-  options:  is a map include several keys
+  options:    options is a collection include several keys
+    like [ [:requre-context true] [:params-checks ...] [... ...] ]
+
+  the meaning of option:
    :require-context (true or false default false)
       whether this command must have context
    :params-checks
