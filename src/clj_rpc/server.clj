@@ -37,7 +37,7 @@
 (defn export-commands
   "export all functions (fn-names is null or empty)
    or specify functions in the namespace ns
-
+   invoker of this method must notice the order of the options
   options:  is a map include several keys
    :require-context (true or false default false)
       whether this command must have context
@@ -52,7 +52,7 @@
    (export-commands \"clojure.core\" nil)
    (export-commands 'clojure.core ['+])
    (export-commands 'clojure.core [\"+\"]
-                    {:require-context true :params-check {0 [:id]}})"
+                    [ [:require-context true] [:params-check {0 [:id]}] ])"
   [ns fn-names & [options]]
   (let [ns (symbol ns)]
     (require ns)
@@ -68,14 +68,11 @@
    return the execute result"
   [command-map request method-request]
   (logging/debug "execute-command == " method-request)
-  (let [id (:id method-request)
-        cmd (command-map (:method method-request))
+  (let [cmd (command-map (:method method-request))
         f (and cmd (command/.func cmd))
-        new-method-request (context/check-context cmd request method-request)]
-    (if (context/error-method-request? new-method-request)
-      (rpc/mk-error (:code new-method-request) id
-                    (:message new-method-request))
-      (rpc/execute-method f (:params new-method-request) id))))
+        new-method-request (context/adjust-method-request
+                            cmd request method-request)]
+    (rpc/execute-method f new-method-request)))
 
 (defn help-commands
   "return the command list"

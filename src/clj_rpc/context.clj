@@ -2,10 +2,6 @@
   (:require [ring.middleware.cookies :as cookies]
             [clj-rpc.user-data :as data]))
 
-
-;;the options availbe to context
-(def context-options [:require-context :params-check :params-inject])
-
 (defn wrap-client-ip
   "let :remote-addr represents the real client ip even though
    the client connects through a proxy server"
@@ -37,7 +33,10 @@
 
 (defn add-context
   "add context to specific command
-   options is a map include several keys
+   options is a collection include several keys
+   like [ [:requre-context true] [:params-checks ...] [... ...] ]
+   
+   the meaning of option:
    :require-context (true or false default false)
       whether this command must have context
    :params-checks
@@ -53,8 +52,7 @@
        if client invoke (fun param1 param2) then the acutally invoke will be like
        (fun client-ip server-name param1 param2)"
   [command options]
-  {:pre [ (every? #(% (set context-options)) (keys options))]}
-  (merge command options))
+  (assoc command :options options))
 
 (defn add-context-to-command-map
   "add context options to all the command in the command-map
@@ -66,69 +64,66 @@
   "return true if method-reqeust error
   else false"
   [method-request]
-  (boolean (or (:code method-request)
-               (:message method-request))))
+  (boolean (:error method-request)))
 
-(defmulti pre-handle-method-request
-  "pre handle method request
-   return new method-request if successful
-   else return error like {:code error-code :message error-message}"
-  (fn [option-key option request method-request]
-    (if (not (error-method-request? method-request))
-      option-key
-      :default)))
+(defmulti render-method-request
+  "adjust method request by option
+   return new method-request or nil (not any change)"
+  (fn [option-key option-value request method-request]
+    option-key))
 
-;;pre handle :require-context option
-;;return method-request if the command don't need authrization or
-;;the context include the authorization information
-;;else return {:code :unauthorized}
-(defmethod pre-handle-method-request :require-context
-  [_ option request method-request]
-  (let [context (get request :context)]
-    (if (and option
-             (not (seq context)))
-      {:code :unauthorized}
-      method-request)))
+;;render method-request :require-context option
+(defmethod render-method-request :require-context
+  [_ option-value request method-request]
+  (when (and option-value
+             (not (seq (get request :context) )))
+    (assoc method-request :error {:code :unauthorized})))
 
-;;pre handle :params-check
-;;return method-request if the params of the command satisfy
-;;the requirement of the command provided specific context
-;;else return {:code invalid-params :message error-message}
-(defmethod pre-handle-method-request :params-check
-  [_ option request method-request]
-  (let [context (get request :context)
-        params (:params method-request)
+;;render method-request :params-check option
+;;return method-request with params error or nil
+(defmethod render-method-request :params-check
+  [_ option-value request method-request]
+  (let [{context :context} request
+        {params :params} method-request
         fn-check
         (fn [[k v]]
             (if (not= (nth params k) (get-in context v))
               {:code :invalid-params
-               :message (str "the " k "th param must be " (get-in context v))}))]
-    (or (->> option
-             (map fn-check )
-             (filter identity)
-             first)
-        method-request)))
+               :message (str "the " k "th param must be "
+                             (get-in context v))}))]
+    (when-let [error (->> option-value
+                (map fn-check )
+                (filter identity)
+                first)]
+      (assoc method-request :error
+             error))))
 
-;;pre handle :params-inject
+;;render method-request :params-inject option
 ;;inject the params from request needed by the command
-;;into the actualparams
-;;return the new method-request
-(defmethod pre-handle-method-request :params-inject
-  [_ option request method-request]
-  (if option
+;;into the actual params
+;;return the new method-request or nil
+(defmethod render-method-request :params-inject
+  [_ option-value request method-request]
+  (when option-value
     (update-in method-request [:params]
-               #(concat (map (partial get-in request) option) %))
-    method-request))
+               #(concat (map (partial get-in request) option-value) %))))
 
-;;default return origin method-request
-(defmethod pre-handle-method-request :default
-  [_ option request method-request]
-  method-request)
+;;default throw RuntimeException
+(defmethod render-method-request :default
+  [option-key option-value request method-request]
+  (throw (RuntimeException. (str "invalid command option , method-requet:  "
+                                 method-request " option: "
+                                 option-key
+                                 " => " option-value)  )) )
 
-(defn check-context
-  "handle options of the command by order
-   and return  new method-request or error message"
+(defn adjust-method-request
+  "return new method-request (possible with error message)"
   [cmd request method-request]
-  (reduce (fn [m-r k] (pre-handle-method-request k (get cmd k) request m-r))
-          method-request
-          context-options))
+  (loop [options (:options cmd)
+         m-r method-request]
+    (let [[option-key option-value] (first options)]
+      (if (or (nil? option-key) (error-method-request? m-r))
+        m-r
+        (recur (rest options)
+               (or (render-method-request option-key option-value request m-r)
+                   m-r))))))
