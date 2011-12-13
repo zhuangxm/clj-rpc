@@ -68,19 +68,21 @@
 
 (defmulti render-method-request
   "adjust method request by option
-   return new method-request or nil (not any change)"
+   return new method-request"
   (fn [option-key option-value request method-request]
     option-key))
 
 ;;render method-request :require-context option
+;;return method-request with error or original method-request
 (defmethod render-method-request :require-context
   [_ option-value request method-request]
-  (when (and option-value
+  (if (and option-value
              (not (seq (get request :context) )))
-    (assoc method-request :error {:code :unauthorized})))
+    (assoc method-request :error {:code :unauthorized})
+    method-request))
 
 ;;render method-request :params-check option
-;;return method-request with params error or nil
+;;return method-request with params error or original method-request
 (defmethod render-method-request :params-check
   [_ option-value request method-request]
   (let [{context :context} request
@@ -91,30 +93,29 @@
               {:code :invalid-params
                :message (str "the " k "th param must be "
                              (get-in context v))}))]
-    (when-let [error (->> option-value
+    (if-let [error (->> option-value
                 (map fn-check )
                 (filter identity)
                 first)]
-      (assoc method-request :error
-             error))))
+      (assoc method-request :error error)
+      method-request)))
 
 ;;render method-request :params-inject option
 ;;inject the params from request needed by the command
 ;;into the actual params
-;;return the new method-request or nil
+;;return the new method-request
 (defmethod render-method-request :params-inject
   [_ option-value request method-request]
-  (when option-value
+  (if option-value
     (update-in method-request [:params]
-               #(concat (map (partial get-in request) option-value) %))))
+               #(concat (map (partial get-in request) option-value) %))
+    method-request))
 
 ;;default throw RuntimeException
 (defmethod render-method-request :default
   [option-key option-value request method-request]
-  (throw (RuntimeException. (str "invalid command option , method-requet:  "
-                                 method-request " option: "
-                                 option-key
-                                 " => " option-value)  )) )
+  (throw (RuntimeException. (str "Unknown command option: " option-key
+                                 "method-request: " method-request )  )) )
 
 (defn adjust-method-request
   "return new method-request (possible with error message)"
@@ -125,5 +126,4 @@
       (if (or (nil? option-key) (error-method-request? m-r))
         m-r
         (recur (rest options)
-               (or (render-method-request option-key option-value request m-r)
-                   m-r))))))
+               (render-method-request option-key option-value request m-r))))))
