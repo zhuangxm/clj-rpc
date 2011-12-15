@@ -69,7 +69,7 @@
         (when (> (- now last-visit) time-out)
           (swap! atom-user-datas dissoc k))))))
 
-(defn time-clean-timeout!
+(defn auto-clean-timeout!
   "clean all expired user data every interval millsecond"
   [interval time-out]
   (.start  (Thread. (fn []
