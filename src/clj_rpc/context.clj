@@ -2,6 +2,17 @@
   (:require [ring.middleware.cookies :as cookies]
             [clj-rpc.user-data :as data]))
 
+(defn wrap-client-ip
+  "let :remote-addr represents the real client ip even though
+   the client connects through a proxy server"
+  [handler]
+  (fn [request]
+    (let [ip-from-proxy (get-in request [:headers "X-Forwarded-For"])
+          request (if ip-from-proxy
+                    (assoc request :remote-addr ip-from-proxy)
+                    request)]
+      (handler request))))
+
 (defn wrap-context
   "accoding to the token
      (come from cookie in the http request or the token parameters)
@@ -22,52 +33,97 @@
 
 (defn add-context
   "add context to specific command
-   options is a map include several keys
+   options is a collection include several keys
+   like [ [:requre-context true] [:params-checks ...] [... ...] ]
+   
+   the meaning of option:
    :require-context (true or false default false)
       whether this command must have context
    :params-checks
      check parameters of the method be invoked statisfy the sepcific requirements
      example :
        {0 [:username]} -->
-       the first parameter must equals (get-in context [:username])"
+       the first parameter must equals (get-in context [:username])
+   :params-inject
+      inject parameters from request into the function
+      example :
+       [ [:remote-addr] [:server-name] ] -->
+       client-ip and server-name as the first and second parameter of the function
+       if client invoke (fun param1 param2) then the acutally invoke will be like
+       (fun client-ip server-name param1 param2)"
   [command options]
-  (merge command options))
+  (assoc command :options options))
 
 (defn add-context-to-command-map
   "add context options to all the command in the command-map
    options : same as add-context"
   [command-map options]
-  (into {} (map (fn [[k v]] [k (merge v options)]) command-map)))
+  (into {} (map (fn [[k v]] [k (add-context v options)]) command-map)))
 
-(defn- check-authorization
-  "return nil if the command don't need authrization or
-   the context include the authorization information
-   else return {:code :unauthorized}"
-  [context command]
-  (when (and (get command :require-context)
-             (not (seq context)))
-    {:code :unauthorized}))
+(defn error-method-request?
+  "return true if method-reqeust error
+  else false"
+  [method-request]
+  (boolean (:error method-request)))
 
-(defn- check-params
-  "return nil
-      if the params of the command satisfy the requirement of the command
-      provided specific context
-   else return {:code invalid-params :message error-message}"
-  [context command command-params]
-  (letfn [(fn-check [[k v]]
-            (if (not= (nth command-params k) (get-in context v))
+(defmulti render-method-request
+  "adjust method request by option
+   return new method-request"
+  (fn [option-key option-value request method-request]
+    option-key))
+
+;;render method-request :require-context option
+;;return method-request with error or original method-request
+(defmethod render-method-request :require-context
+  [_ option-value request method-request]
+  (if (and option-value
+             (not (seq (get request :context) )))
+    (assoc method-request :error {:code :unauthorized})
+    method-request))
+
+;;render method-request :params-check option
+;;return method-request with params error or original method-request
+(defmethod render-method-request :params-check
+  [_ option-value request method-request]
+  (let [{context :context} request
+        {params :params} method-request
+        fn-check
+        (fn [[k v]]
+            (if (not= (nth params k) (get-in context v))
               {:code :invalid-params
-               :message (str "the " k "th param must be " (get-in context v ))} ))]
-    (->> (:params-checks command)
-         (map fn-check )
-         (filter identity)
-         first)))
+               :message (str "the " k "th param must be "
+                             (get-in context v))}))]
+    (if-let [error (->> option-value
+                (map fn-check )
+                (filter identity)
+                first)]
+      (assoc method-request :error error)
+      method-request)))
 
-(defn check-context
-  "check whether the command and params statisfy the requirement
-   if success return nil
-   else return {:code error-code :message error-message}
-   error-code refer to clj-rpc.rpc.clj"
-  [command context params]
-  (or (check-authorization context command)
-      (check-params context command params)))
+;;render method-request :params-inject option
+;;inject the params from request needed by the command
+;;into the actual params
+;;return the new method-request
+(defmethod render-method-request :params-inject
+  [_ option-value request method-request]
+  (if option-value
+    (update-in method-request [:params]
+               #(concat (map (partial get-in request) option-value) %))
+    method-request))
+
+;;default throw RuntimeException
+(defmethod render-method-request :default
+  [option-key option-value request method-request]
+  (throw (RuntimeException. (str "Unknown command option: " option-key
+                                 "method-request: " method-request )  )) )
+
+(defn adjust-method-request
+  "return new method-request (possible with error message)"
+  [cmd request method-request]
+  (loop [options (:options cmd)
+         m-r method-request]
+    (let [[option-key option-value] (first options)]
+      (if (or (nil? option-key) (error-method-request? m-r))
+        m-r
+        (recur (rest options)
+               (render-method-request option-key option-value request m-r))))))

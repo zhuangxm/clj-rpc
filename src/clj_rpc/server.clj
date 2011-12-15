@@ -37,8 +37,11 @@
 (defn export-commands
   "export all functions (fn-names is null or empty)
    or specify functions in the namespace ns
+   invoker of this method must notice the order of the options
+  options:    options is a collection include several keys
+    like [ [:requre-context true] [:params-checks ...] [... ...] ]
 
-  options:  is a map include several keys
+  the meaning of option:
    :require-context (true or false default false)
       whether this command must have context
    :params-checks
@@ -52,7 +55,7 @@
    (export-commands \"clojure.core\" nil)
    (export-commands 'clojure.core ['+])
    (export-commands 'clojure.core [\"+\"]
-                    {:require-context true :params-check {0 [:id]}})"
+                    [ [:require-context true] [:params-check {0 [:id]}] ])"
   [ns fn-names & [options]]
   (let [ns (symbol ns)]
     (require ns)
@@ -66,15 +69,13 @@
   "get the function from the command-map according the method-name and
    execute this function with args
    return the execute result"
-  [command-map context {:keys [method params id]}]
-  (logging/debug "execute-command == method-name: "
-                 method " params: " params " id: " id)
-  (let [cmd (command-map method)
+  [command-map request method-request]
+  (logging/debug "execute-command == " method-request)
+  (let [cmd (command-map (:method method-request))
         f (and cmd (command/.func cmd))
-        check-result (context/check-context cmd context params)]
-    (if check-result
-      (rpc/mk-error (:code check-result) id (:message check-result))
-      (rpc/execute-method f params id))))
+        new-method-request (context/adjust-method-request
+                            cmd request method-request)]
+    (rpc/execute-method f new-method-request)))
 
 (defn help-commands
   "return the command list"
@@ -90,9 +91,9 @@
 (defn rpc-invoke
   "invoke rpc method
    rpc-request can a map (one invoke) or a collection of map (multi invokes)"
-  [command-map context rpc-request]
+  [command-map request rpc-request]
   (letfn [(fn-execute [r]
-             (execute-command command-map context
+             (execute-command command-map request
                               (change-str->keyword r)))]
     (if (map? rpc-request)
       (fn-execute rpc-request)
@@ -102,11 +103,11 @@
   (ANY "/:s-method/help" [s-method]
        (when-let [[f-encode] (protocol/serialization s-method)]
          (f-encode (help-commands @commands))))
-  (POST "/:s-method/invoke" [s-method :as {context :context body :body}]
-        (let [rpc-request (slurp body)]
+  (POST "/:s-method/invoke" [s-method :as reqeust]
+        (let [rpc-request (slurp (:body reqeust))]
           (logging/debug "invoking (" s-method ") request: " rpc-request)
           (let [[f-encode f-decode] (protocol/serialization s-method)]
-            (f-encode (rpc-invoke @commands context (f-decode rpc-request))))))
+            (f-encode (rpc-invoke @commands reqeust (f-decode rpc-request))))))
   (route/not-found "invalid url"))
 
 ;;define a jetty-instance used to start or stop
@@ -120,11 +121,12 @@
   (reset! jetty-instance nil))
 
 (defn build-hander [options]
-  (handler/site
-   (context/wrap-context  main-routes
-                          (:fn-get-context options)
-                          (:cookie-attrs options)
-                          (:token-cookie-key options))))
+  (-> main-routes
+      (context/wrap-context (:fn-get-context options)
+                            (:cookie-attrs options)
+                            (:token-cookie-key options))
+      (context/wrap-client-ip)
+      handler/site))
 
 (defn start
   "start jetty server

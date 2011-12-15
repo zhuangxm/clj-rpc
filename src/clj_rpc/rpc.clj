@@ -43,10 +43,12 @@
   "execute a function f  with params
    return rpc response
    id : used for generate the response"
-  [f params id]
+  [f {:keys [params id error]}]
   (try
-    (if f 
-      (mk-response (apply f params) id)
-      (mk-error :method-not-found id))
+    (if error
+      (mk-error (:code error) id (:message error))
+      (if f 
+        (mk-response (apply f params) id)
+        (mk-error :method-not-found id)))
     (catch ArityException e (mk-error :invalid-params id (.getMessage e)) )
     (catch Exception e (mk-error :internal-error id (.getMessage e)))))
