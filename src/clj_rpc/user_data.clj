@@ -1,5 +1,6 @@
 (ns clj-rpc.user-data
-  (:require [clojure.tools.logging :as logging]))
+  (:require [clojure.tools.logging :as logging])
+  (:import [java.util.concurrent ScheduledThreadPoolExecutor TimeUnit]))
 
 ;;user data format
 ;;data is the actual user data
@@ -58,27 +59,27 @@
 
 ;;clean the user data that has been expired.
 
+(defn clean-timeout-data
+  [data now timeout]
+  (into {}
+        (remove (fn [[k {last-visit :last-visit}]]
+                  (> (- now last-visit) timeout))
+                data)))
+
 (defn clean-timeout!
   "clean all expired user data
    now : the time of now , should be System/currentTimeMiles
    time-out : time out peroid, use millsecond as unit."
-  [now time-out]
-  (let [ks (keys @atom-user-datas)]
-    (doseq [k ks]
-      (when-let [last-visit (get-in @atom-user-datas [k :last-visit])]
-        (when (> (- now last-visit) time-out)
-          (swap! atom-user-datas dissoc k))))))
+  [now timeout]
+  (logging/debug "begin clean timeout user data count : "
+                 (count @atom-user-datas))
+  (swap! atom-user-datas clean-timeout-data now timeout)
+  (logging/debug "after clean timeout user data count : "
+                 (count @atom-user-datas)))
 
-(defn auto-clean-timeout!
+(defn periodical-clean-data!
   "clean all expired user data every interval millsecond"
-  [interval time-out]
-  (.start  (Thread. (fn []
-                      (loop []
-                        (do 
-                          (Thread/sleep interval)
-                          (logging/debug "begin clean timeout user data count : "
-                                         (count @atom-user-datas))
-                          (clean-timeout! (now) time-out)
-                          (logging/debug "after clean timeout user data count : "
-                                         (count @atom-user-datas))
-                          (recur)))) )))
+  [interval timeout]
+  (let [scheduler (ScheduledThreadPoolExecutor. 1)
+        todo (fn [] (clean-timeout! (now) timeout))]
+    (.scheduleAtFixedRate scheduler todo interval interval TimeUnit/MILLISECONDS)))

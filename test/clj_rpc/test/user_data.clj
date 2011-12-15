@@ -14,4 +14,5 @@
     (save-user-data! 100) => 100)
   (count @atom-user-datas) => 2
   (clean-timeout! (now) 1000) => nil
+  @atom-user-datas => map?
   (count @atom-user-datas) => 1)
