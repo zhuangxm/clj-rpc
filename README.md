@@ -1,6 +1,6 @@
 # clj-rpc
 
-Version 0.2.1 Release.
+Version 0.2.2 Release.
 
 Add helper.clj to support intergrate test.
 
@@ -51,13 +51,13 @@ remote invoke it.
 
 define:
 
-(export-commands ns fn-names & options)
+(export-commands ns fn-names & [options])
 
 example: 
 
 ```clojure
 (export-commands 'clojure.core ["+" "-"] 
-   {:require-context true :params-checks {0 [:number1]} })
+   [ [:require-context true] [:params-checks {0 [:number1]}] ])
 ```
 
 this example mean we export a function + - of the clojure.core
@@ -112,19 +112,20 @@ web client can not get. we can dynamic inject this kind of parameters
 (from ring request) into method.
 
 the export-commands support options like 
-{:params-inject [ [:remote-addr] [:header "host]]}
+[ [:params-inject [ [:remote-addr] [:header "host] ] ]]
 
 and clj-rpc will (get-in request [:remote-addr]) and (get-in request
 [:header "host"]) as the first and second parameter of the method that
 client invokes.
 
 Example: 
+
 ```clojure
 (defn fn-do-someting [client-ip username]
       ... )
 
 (export-commands 'mynamespace ["fn-do-something"]
-                 {:params-inject [ [:remote-addr] ]})
+                 [ [:params-inject [ [:remote-addr] ] ]])
 ```
 
 Then the client will invoke function like (fn-do-something usernmae)
@@ -176,7 +177,7 @@ be exported.
 add to porject.clj
 
 ```clojure
-[clj-rpc "0.2.0"]
+[clj-rpc "0.2.2"]
 ```
 
 sample code:
@@ -198,7 +199,7 @@ sample code:
 
  ;;export user-info function
  (server/export-commands 'rpc.demo ["user-info"]
-     {:require-context true :params-checks {0 [:username]} })    
+     [ [:require-context true] [:params-checks {0 [:username]}] ])    
  
  ;;export all functions in the namespace clojure.core
  (server/export-commands 'clojure.core nil)
@@ -223,8 +224,6 @@ sample code:
  (client/invoke-rpc-with-token endp "token1" "user-info" ["user1"])  
 
 ```
-
-You can use leiningen plugin [lein-clj-rpc](https://github.com/zhuangxm/lein-clj-rpc) to generate client stub code
 
 ## License
 
