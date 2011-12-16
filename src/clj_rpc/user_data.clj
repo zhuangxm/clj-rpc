@@ -1,5 +1,7 @@
 (ns clj-rpc.user-data
-  (:require [clojure.tools.logging :as logging])
+  (:require [clojure.tools.logging :as logging]
+            [ring.middleware.session.store :as store]
+            [clj-rpc.simple-store :as simple-store])
   (:import [java.util.concurrent ScheduledThreadPoolExecutor TimeUnit]))
 
 ;;user data format
@@ -17,20 +19,24 @@
   (System/currentTimeMillis))
 
 ;;define the user relate data.
-(def atom-user-datas (atom {}))
+;;the datas like :  {"key" (atom {:data data :last-visit last-visit}) ...}
+(def user-db (atom {}))
+
+;;a store using ring SessionStore protocol
+(def user-store (simple-store/simple-store user-db))
 
 ;;define user relate token, used for binding to per request
 (def ^:dynamic *atom-token* (atom nil))
 
 (defn get-session-data
-  "internal used only"
+  "internal used only, return a atom"
   [token]
-  (get @atom-user-datas token))
+  (store/read-session user-store token))
 
 (defn get-user-data
   "the default method to get user data"
   [token]
-  (get-in @atom-user-datas [token :data]))
+  (:data (get-session-data token)))
 
 (defn save-user-data!
   "sava user data , if token doesn't exist ,create a new one
@@ -39,8 +45,8 @@
   (do
     ;;treat @atom-token* "" as nil
     (if (not (seq @*atom-token*)) (reset! *atom-token* (uuid)) )
-    (swap! atom-user-datas assoc @*atom-token*
-           (struct session-data data (now)) )
+    (store/write-session user-store @*atom-token*
+                         (struct session-data data (now)))
     data))
 
 (defn get-user-data!
@@ -53,7 +59,7 @@
   "delete user data, only side effect ,return nil"
   []
   (do
-    (swap! atom-user-datas dissoc @*atom-token*)
+    (store/delete-session user-store @*atom-token*)
     (reset! *atom-token* "")
     nil))
 
@@ -66,20 +72,33 @@
                   (> (- now last-visit) timeout))
                 data)))
 
+
 (defn clean-timeout!
   "clean all expired user data
    now : the time of now , should be System/currentTimeMiles
    time-out : time out peroid, use millsecond as unit."
+  [now time-out]
+  (let [ks (keys @user-db)]
+    (doseq [k ks]
+      (when-let [last-visit (get (get-session-data k) :last-visit 0)]
+        (when (> (- now last-visit) time-out)
+          (store/delete-session user-store k))))))
+
+(defn with-log-clean-timeout!
+  "clean all expired user data
+   now : the time of now , should be System/currentTimeMiles
+   time-out : time out peroid, use millsecond as unit.
+   TODO : It's ugly here, to make the code better. "
   [now timeout]
   (logging/debug "begin clean timeout user data count : "
-                 (count @atom-user-datas))
-  (swap! atom-user-datas clean-timeout-data now timeout)
+                 (count @user-db))
+  (clean-timeout! now timeout)
   (logging/debug "after clean timeout user data count : "
-                 (count @atom-user-datas)))
+                 (count @user-db)))
 
 (defn periodical-clean-data!
   "clean all expired user data every interval millsecond"
   [interval timeout]
   (let [scheduler (ScheduledThreadPoolExecutor. 1)
-        todo (fn [] (clean-timeout! (now) timeout))]
+        todo (fn [] (with-log-clean-timeout! (now) timeout))]
     (.scheduleAtFixedRate scheduler todo interval interval TimeUnit/MILLISECONDS)))
