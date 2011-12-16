@@ -1,6 +1,7 @@
 (ns clj-rpc.user-data
   (:require [clojure.tools.logging :as logging]
-            [clj-rpc.simple-db :as db])
+            [ring.middleware.session.store :as store]
+            [clj-rpc.simple-store :as simple-store])
   (:import [java.util.concurrent ScheduledThreadPoolExecutor TimeUnit]))
 
 ;;user data format
@@ -19,7 +20,10 @@
 
 ;;define the user relate data.
 ;;the datas like :  {"key" (atom {:data data :last-visit last-visit}) ...}
-(def user-db (db/create-db))
+(def user-db (atom {}))
+
+;;a store using ring SessionStore protocol
+(def user-store (simple-store/simple-store user-db))
 
 ;;define user relate token, used for binding to per request
 (def ^:dynamic *atom-token* (atom nil))
@@ -27,7 +31,7 @@
 (defn get-session-data
   "internal used only, return a atom"
   [token]
-  (db/get-data user-db token))
+  (store/read-session user-store token))
 
 (defn get-user-data
   "the default method to get user data"
@@ -41,7 +45,8 @@
   (do
     ;;treat @atom-token* "" as nil
     (if (not (seq @*atom-token*)) (reset! *atom-token* (uuid)) )
-    (db/save-data user-db @*atom-token* (struct session-data data (now)))
+    (store/write-session user-store @*atom-token*
+                         (struct session-data data (now)))
     data))
 
 (defn get-user-data!
@@ -54,7 +59,7 @@
   "delete user data, only side effect ,return nil"
   []
   (do
-    (db/delete-data user-db @*atom-token*)
+    (store/delete-session user-store @*atom-token*)
     (reset! *atom-token* "")
     nil))
 
@@ -77,7 +82,7 @@
     (doseq [k ks]
       (when-let [last-visit (get (get-session-data k) :last-visit 0)]
         (when (> (- now last-visit) time-out)
-          (db/delete-data user-db k))))))
+          (store/delete-session user-store k))))))
 
 (defn with-log-clean-timeout!
   "clean all expired user data
