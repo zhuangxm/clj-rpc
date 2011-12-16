@@ -1,18 +1,19 @@
 (ns clj-rpc.test.user-data
   (:use [clj-rpc.user-data]
+        [clj-rpc.simple-db :as db]
         [midje.sweet]))
 
 (facts "test user-data"
-  (reset! atom-user-datas nil) => nil
+  (reset! user-db nil) => nil
   (get-user-data!) => nil
   (save-user-data! 30) => 30
   (get-user-data!) => 30
   (clean-timeout! (now) 1000) => nil
-  (count @atom-user-datas) => 1
+  (db/data-count user-db) => 1
   (Thread/sleep 1100)
   (binding [*atom-token* (atom "333")]
     (save-user-data! 100) => 100)
-  (count @atom-user-datas) => 2
+  (db/data-count user-db) => 2
   (clean-timeout! (now) 1000) => nil
-  @atom-user-datas => map?
-  (count @atom-user-datas) => 1)
+  @user-db => map?
+  (db/data-count user-db) => 1)
