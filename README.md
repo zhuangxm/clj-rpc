@@ -1,10 +1,8 @@
 # clj-rpc
 
-Version 0.2.2 Release.
+version 0.2.3 Release.
 
-Add helper.clj to support intergrate test.
-
-A simple clojure rpc using clojure protocol 
+A simple clojure rpc using clojure and json protocol 
 
 all the arguments of the function and the result must statify the
 rule:
@@ -224,6 +222,20 @@ sample code:
  (client/invoke-rpc-with-token endp "token1" "user-info" ["user1"])  
 
 ```
+
+## addition
+
+### integrate test.
+ clj-rpc.helper supplies the support for supprt integrate test.
+ 
+ example can refer to clj-rpc.test.helper.clj in test filder.
+
+### clean timeout user data.
+ clj-rpc.user-data unit supplies two method can clean the timeout
+ userdata.
+
+ * (clean-timeout! now timeout) ===> clean user data once 
+ * (periodical-clean-data! interval timeout) ===> clean user data every interval time. 
 
 ## License
 
