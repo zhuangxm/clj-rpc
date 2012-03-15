@@ -39,6 +39,6 @@
 
 ;;demo
 (comment
-  (def client1 mk-clj-client "cookie-key")
+  (def client1 (mk-clj-client "cookie-key"))
   (client1 "str" ["hello" "world"])
   (client1 "str" ["hello" "world"] "+" [1 2]))
