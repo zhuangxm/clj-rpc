@@ -245,6 +245,7 @@ add require
 ```
 
 raise an error with code in your logic code:
+
 ```clojure
 (exception/raise-error 300 "error")
 ```
