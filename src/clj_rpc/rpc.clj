@@ -1,5 +1,6 @@
 (ns clj-rpc.rpc
-  (:import [clojure.lang ArityException]))
+  (:import [clojure.lang ArityException]
+           [clj_rpc CodeException]))
 
 ;;defind rpc message format, refering json-rpc definition
 
@@ -23,7 +24,6 @@
    :internal-error   -32603
    :unauthorized     401
    :undefine         404})
-
 
 (defn mk-response
   "generate response"
@@ -50,5 +50,6 @@
       (if f 
         (mk-response (apply f params) id)
         (mk-error :method-not-found id)))
-    (catch ArityException e (mk-error :invalid-params id (.getMessage e)) )
+    (catch ArityException e (mk-error :invalid-params id (.getMessage e)))
+    (catch CodeException e (mk-error (.getCode e) id (.getMessage e)))
     (catch Exception e (mk-error :internal-error id (.getMessage e)))))

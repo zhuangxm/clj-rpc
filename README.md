@@ -237,6 +237,18 @@ sample code:
  * (clean-timeout! now timeout) ===> clean user data once 
  * (periodical-clean-data! interval timeout) ===> clean user data every interval time. 
 
+### raise CodeException
+add require
+
+```clojure
+(:require [clj_rpc.exception :as exception]
+```
+
+raise an error with code in your logic code:
+```clojure
+(exception/raise-error 300 "error")
+```
+
 ## License
 
 Copyright (C) 2011 FIXME
