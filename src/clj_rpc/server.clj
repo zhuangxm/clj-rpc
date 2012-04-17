@@ -120,12 +120,23 @@
     (.stop @jetty-instance))
   (reset! jetty-instance nil))
 
+(defn wrap-cost
+  [handler]
+  (fn [request]
+    (let [start (System/currentTimeMillis)
+          response (handler request)]
+      (logging/debug (str "invoke reqeust cost "
+                          (- (System/currentTimeMillis) start)))
+      response)))
+
+
 (defn build-hander [options]
   (-> main-routes
       (context/wrap-context (:fn-get-context options)
                             (:cookie-attrs options)
                             (:token-cookie-key options))
       (context/wrap-client-ip)
+      (wrap-cost)
       handler/site))
 
 (defn start
