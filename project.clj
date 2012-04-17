@@ -7,5 +7,6 @@
                            [ring "0.3.11"]
                            [cheshire "2.0.2"]]
             :dev-dependencies [[log4j "1.2.16"]
-                               [midje "1.3-alpha5"]])
+                               [midje "1.3-alpha5"]]
+            :aot [clj-rpc.Exception])
 
