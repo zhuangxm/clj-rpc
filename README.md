@@ -237,17 +237,24 @@ sample code:
  * (clean-timeout! now timeout) ===> clean user data once 
  * (periodical-clean-data! interval timeout) ===> clean user data every interval time. 
 
-### raise CodeException
+### custom define error code and message
+
+If you want to return to client client custom error code and error
+message, you just need to invoke function raise-error in clj-rpc.error namespace.
+
 add require
 
 ```clojure
-(:require [clj_rpc.exception :as exception]
+(:require [clj_rpc.error :as error]
 ```
 
 raise an error with code in your logic code:
 
 ```clojure
-(exception/raise-error 300 "error")
+(defn my-custom-api [] 
+    (if condition
+      (error/raise-error 300 "error")
+     ...))
 ```
 
 ## License
