@@ -241,13 +241,13 @@ sample code:
 add require
 
 ```clojure
-(:require [clj_rpc.exception :as exception]
+(:require [clj_rpc.error :as error]
 ```
 
 raise an error with code in your logic code:
 
 ```clojure
-(exception/raise-error 300 "error")
+(error/raise-error 300 "error")
 ```
 
 ## License
