@@ -32,12 +32,11 @@
 
 (defn mk-error
   "generate error message"
-  [code id &[msg data]]
-  (let [code (if (get error-codes code) code :undefine)]
-    {:error {:code (error-codes code)
-             :message (or msg (error-msgs code))
-             :data (or data "")}
-     :id id}))
+  [code id & [msg data]]
+  {:error {:code (or (error-codes code) code)
+           :message (or msg (error-msgs code))
+           :data (or data "")}
+   :id id})
 
 (defn execute-method
   "execute a function f  with params
