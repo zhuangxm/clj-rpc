@@ -1,6 +1,6 @@
 # clj-rpc
 
-version 0.2.4 Release. 
+version 0.2.5 Release. 
 
 A simple clojure rpc using clojure and json protocol 
 
@@ -175,7 +175,7 @@ be exported.
 add to porject.clj
 
 ```clojure
-[clj-rpc "0.2.4"]
+[clj-rpc "0.2.5"]
 ```
 
 sample code:
@@ -245,7 +245,7 @@ message, you just need to invoke function raise-error in clj-rpc.error namespace
 add require
 
 ```clojure
-(:require [clj_rpc.error :as error]
+(:require [clj-rpc.error :as error]
 ```
 
 raise an error with code in your logic code:
