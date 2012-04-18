@@ -34,12 +34,12 @@
 (defn add-context
   "add context to specific command
    options is a collection include several keys
-   like [ [:requre-context true] [:params-checks ...] [... ...] ]
+   like [ [:requre-context true] [:params-check ...] [... ...] ]
    
    the meaning of option:
    :require-context (true or false default false)
       whether this command must have context
-   :params-checks
+   :params-check
      check parameters of the method be invoked statisfy the sepcific requirements
      example :
        {0 [:username]} -->

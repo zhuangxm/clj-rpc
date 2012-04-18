@@ -1,6 +1,6 @@
 # clj-rpc
 
-version 0.2.3 Release.
+version 0.2.4 Release. 
 
 A simple clojure rpc using clojure and json protocol 
 
@@ -55,7 +55,7 @@ example:
 
 ```clojure
 (export-commands 'clojure.core ["+" "-"] 
-   [ [:require-context true] [:params-checks {0 [:number1]}] ])
+   [ [:require-context true] [:params-check {0 [:number1]}] ])
 ```
 
 this example mean we export a function + - of the clojure.core
@@ -175,7 +175,7 @@ be exported.
 add to porject.clj
 
 ```clojure
-[clj-rpc "0.2.2"]
+[clj-rpc "0.2.4"]
 ```
 
 sample code:
@@ -197,7 +197,7 @@ sample code:
 
  ;;export user-info function
  (server/export-commands 'rpc.demo ["user-info"]
-     [ [:require-context true] [:params-checks {0 [:username]}] ])    
+     [ [:require-context true] [:params-check {0 [:username]}] ])    
  
  ;;export all functions in the namespace clojure.core
  (server/export-commands 'clojure.core nil)
