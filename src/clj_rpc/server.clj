@@ -32,7 +32,7 @@
 
 ;;TODO add the ability to dynamic add wrap-context middleware
 ;;use dynamic method to export commands
-(defonce commands (atom {}))
+(defonce ^:dynamic *commands* (atom {}))
 
 (defn export-commands
   "export all functions (fn-names is null or empty)
@@ -60,7 +60,7 @@
   (let [ns (symbol ns)]
     (require ns)
     (let [var-fns (map #(find-var (symbol (str ns "/" %))) fn-names)]
-      (swap! commands merge 
+      (swap! *commands* merge 
              (context/add-context-to-command-map
               (apply command/get-commands ns var-fns)
               options)))))
@@ -102,12 +102,12 @@
 (defroutes main-routes
   (ANY "/:s-method/help" [s-method]
        (when-let [[f-encode] (protocol/serialization s-method)]
-         (f-encode (help-commands @commands))))
+         (f-encode (help-commands @*commands*))))
   (POST "/:s-method/invoke" [s-method :as reqeust]
         (let [rpc-request (slurp (:body reqeust))]
           (logging/debug "invoking (" s-method ") request: " rpc-request)
           (let [[f-encode f-decode] (protocol/serialization s-method)]
-            (f-encode (rpc-invoke @commands reqeust (f-decode rpc-request))))))
+            (f-encode (rpc-invoke @*commands* reqeust (f-decode rpc-request))))))
   (route/not-found "invalid url"))
 
 ;;define a jetty-instance used to start or stop
@@ -115,10 +115,22 @@
 
 (defn stop
   "stop jetty server"
-  []
-  (when @jetty-instance 
-    (.stop @jetty-instance))
-  (reset! jetty-instance nil))
+  ([]
+     (stop @jetty-instance)
+     (reset! jetty-instance nil))
+  ([instance]
+      (when instance 
+        (.stop instance))))
+
+(defn wrap-commands
+  "enable binding a custom commands map
+   new-commands must be a atom of map"
+  [handler new-commands]
+  (fn [request]
+    (if new-commands
+      (binding [*commands* new-commands]
+        (handler request))
+      (handler request))))
 
 (defn build-hander [options]
   (-> main-routes
@@ -126,20 +138,54 @@
                             (:cookie-attrs options)
                             (:token-cookie-key options))
       (context/wrap-client-ip)
+      (wrap-commands (:commands options))
       handler/site))
 
 (defn start
   "start jetty server
    options :
       base on options of run-jetty  of ring jetty adaptor
-      and add two more
+      and add several more
       :fn-get-context  => function to get the context (fn-get-context token)
       :token-cookie-key => the cookie name according to the token
       :cookie-attrs => the cookie default attributes, include domain or others
-                       reference ring wrap-session"
+                       reference ring wrap-session
+      :commands => the custom commands (atom of map) to be exported. (optional) "
   ([]
      (start {:join? false :port rpc-default-port :host "127.0.0.1"} ))
   ([options]
-     (if @jetty-instance (stop))
-     (reset! jetty-instance
-             (run-jetty (build-hander options) options))))
+     (let [jetty (run-jetty (build-hander options) options)]
+       (if-not (:command options)
+         (reset! jetty-instance jetty)
+         jetty))))
+
+(defmacro with-commands
+  "if you want to define another commands, using this macro,
+   and in it invoke export-commands function lile:"
+  ;;define another command map.
+  [a-commands & body]
+  `(binding [*commands* ~a-commands]
+    ~@body))
+
+(comment
+  "an example of how to start another server with different commands"
+  ;;main server.
+  (export-commands ... )
+  (export-commands ... )
+  (start {:join? false :port 9876})
+
+  ;;if you want to stop default server
+  (stop)
+
+  ;;another server with differenct command
+  (let [new-commands (atom {})]
+    (with-commands new-commands
+      (export-commands ...)
+      (export-commands ...)))
+
+  ;;start another server
+    
+  (def another-server (start {:join? false :commands new-commands :port 1980}))
+
+  ;;if you want to stop another server
+  (stop another-server))
