@@ -183,7 +183,7 @@
       (export-commands ...)
       (export-commands ...)))
 
-  ;;start another server (can not be stop)
+  ;;start another server
     
   (def another-server (start {:join? false :commands new-commands :port 1980}))
 
