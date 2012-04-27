@@ -248,13 +248,15 @@ add require
 (:require [clj-rpc.error :as error]
 ```
 
-raise an error with code in your logic code:
+raise an error with code and error data in your logic code:
 
 ```clojure
+;;only code
 (defn my-custom-api [] 
     (if condition
       (error/raise-error 300 "error")
      ...))
+
 ;;with error data
 (defn my-custom-api [] 
     (if condition
