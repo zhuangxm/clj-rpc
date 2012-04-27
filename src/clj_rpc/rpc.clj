@@ -38,6 +38,12 @@
            :data (or data "")}
    :id id})
 
+(defn mk-error-from-exinfo
+  [id ^clojure.lang.ExceptionInfo e]
+  (let [msg (.getMessage e)
+        [{:keys [code data]}] (ex-data e)]
+    (mk-error code id msg data)))
+
 (defn execute-method
   "execute a function f  with params
    return rpc response
@@ -50,5 +56,5 @@
         (mk-response (apply f params) id)
         (mk-error :method-not-found id)))
     (catch ArityException e (mk-error :invalid-params id (.getMessage e)))
-    (catch clj_rpc.Exception e (mk-error (.getCode e) id (.getMessage e)))
+    (catch clojure.lang.ExceptionInfo e (mk-error-from-exinfo id e))
     (catch Exception e (mk-error :internal-error id (.getMessage e)))))
