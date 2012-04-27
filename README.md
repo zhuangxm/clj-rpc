@@ -255,6 +255,11 @@ raise an error with code in your logic code:
     (if condition
       (error/raise-error 300 "error")
      ...))
+;;with error data
+(defn my-custom-api [] 
+    (if condition
+      (error/raise-error 300 {:data "error data"} "error")
+     ...))
 ```
 
 ## License
