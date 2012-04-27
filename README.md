@@ -1,6 +1,6 @@
 # clj-rpc
 
-version 0.2.5 Release. 
+version 0.2.7 Release. (require clojure 1.4.0) 
 
 A simple clojure rpc using clojure and json protocol 
 
@@ -260,7 +260,7 @@ raise an error with code and error data in your logic code:
 ;;with error data
 (defn my-custom-api [] 
     (if condition
-      (error/raise-error 300 {:data "error data"} "error")
+      (error/raise-error 300 "error" {:data "error data"})
      ...))
 ```
 
