@@ -41,7 +41,7 @@
 (defn mk-error-from-exinfo
   [id ^clojure.lang.ExceptionInfo e]
   (let [msg (.getMessage e)
-        [{:keys [code data]}] (ex-data e)]
+        {:keys [code data]} (ex-data e)]
     (mk-error code id msg data)))
 
 (defn execute-method
