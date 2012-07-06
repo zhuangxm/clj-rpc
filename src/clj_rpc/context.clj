@@ -1,13 +1,28 @@
 (ns clj-rpc.context
   (:require [ring.middleware.cookies :as cookies]
-            [clj-rpc.user-data :as data]))
+            [clj-rpc.user-data :as data]
+            [clojure.tools.logging :as logging]))
+
+(defn extract-headers [request]
+  "From enumerator to map"
+  (let [headers (get-in request [:headers])]
+       (logging/debug "Headers" headers)
+       (into {} (map #(vector (.getKey %1) (.getValue %1)) headers))))
+
+(defn get-proxy-ip
+  [request]
+  (let [headers-map (extract-headers request)
+        ip-from-proxy (get-in headers-map ["x-forwarded-for"])
+        ip-from-proxy (if (or (nil? ip-from-proxy) (.length ip-from-proxy) (= "unknown" ip-from-proxy))
+                        (get-in headers-map ["x-real-ip"]))]
+    ip-from-proxy))
 
 (defn wrap-client-ip
   "let :remote-addr represents the real client ip even though
    the client connects through a proxy server"
   [handler]
   (fn [request]
-    (let [ip-from-proxy (get-in request [:headers "X-Forwarded-For"])
+    (let [ip-from-proxy (get-proxy-ip request)
           request (if ip-from-proxy
                     (assoc request :remote-addr ip-from-proxy)
                     request)]
