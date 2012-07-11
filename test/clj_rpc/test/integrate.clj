@@ -133,6 +133,7 @@
           query-get (mk-data-query "fn-get-data")
           query-delete (mk-data-query "fn-delete-data")
           result-save (invoke-data-query query-save)
+          _ (prn result-save)
           cookie-m (get-in result-save [:cookies "hjd-session"])
           cookie (get cookie-m :value)
           _ (prn cookie-m)]

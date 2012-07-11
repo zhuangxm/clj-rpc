@@ -1,13 +1,19 @@
 (ns clj-rpc.context
   (:require [ring.middleware.cookies :as cookies]
-            [clj-rpc.user-data :as data]))
+            [clj-rpc.user-data :as data]
+            [clojure.tools.logging :as logging]))
+
+(defn get-proxy-ip
+  [request]
+  (or (get-in request [:headers "x-forwarded-for"])
+      (get-in request [:headers "x-real-ip"])))
 
 (defn wrap-client-ip
   "let :remote-addr represents the real client ip even though
    the client connects through a proxy server"
   [handler]
   (fn [request]
-    (let [ip-from-proxy (get-in request [:headers "X-Forwarded-For"])
+    (let [ip-from-proxy (get-proxy-ip request)
           request (if ip-from-proxy
                     (assoc request :remote-addr ip-from-proxy)
                     request)]
