@@ -1,6 +1,7 @@
 # clj-rpc
-
-version 0.2.8 Release. (require clojure 1.4.0) 
+## What's new
+version 0.2.9 Release. (require clojure 1.4.0) 
+fixed that can not get the real ip address of client when using nginx proxy.
 
 A simple clojure rpc using clojure and json protocol 
 
@@ -175,7 +176,7 @@ be exported.
 add to porject.clj
 
 ```clojure
-[clj-rpc "0.2.8"]
+[clj-rpc "0.2.9"]
 ```
 
 sample code:
