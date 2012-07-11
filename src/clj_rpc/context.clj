@@ -3,19 +3,10 @@
             [clj-rpc.user-data :as data]
             [clojure.tools.logging :as logging]))
 
-(defn extract-headers [request]
-  "From enumerator to map"
-  (let [headers (get-in request [:headers])]
-       (logging/debug "Headers" headers)
-       (into {} (map #(vector (.getKey %1) (.getValue %1)) headers))))
-
 (defn get-proxy-ip
   [request]
-  (let [headers-map (extract-headers request)
-        ip-from-proxy (get-in headers-map ["x-forwarded-for"])
-        ip-from-proxy (if (or (nil? ip-from-proxy) (.length ip-from-proxy) (= "unknown" ip-from-proxy))
-                        (get-in headers-map ["x-real-ip"]))]
-    ip-from-proxy))
+  (or (get-in request [:headers "x-forwarded-for"])
+      (get-in request [:headers "x-real-ip"])))
 
 (defn wrap-client-ip
   "let :remote-addr represents the real client ip even though
