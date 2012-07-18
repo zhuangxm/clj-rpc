@@ -1,6 +1,7 @@
 # clj-rpc
 ## What's new
-version 0.2.9 Release. (require clojure 1.4.0) 
+* version 0.3.0 Release. (add http-only and secure into default cookie attrs to improve security. 
+* version 0.2.9 Release. (require clojure 1.4.0) 
 fixed that can not get the real ip address of client when using nginx proxy.
 
 A simple clojure rpc using clojure and json protocol 
