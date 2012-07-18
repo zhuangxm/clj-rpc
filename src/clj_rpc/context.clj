@@ -33,7 +33,8 @@
          (let [response (handler (assoc request :context context))]
            (if (and (not= token @data/*atom-token* token))
              (assoc response :cookies {cookie-key
-                                       (merge {:path "/"} cookie-attrs
+                                       (merge {:path "/" :secure true :http-only true}
+                                              cookie-attrs
                                               {:value @data/*atom-token*})})
              response))) ))))
 
