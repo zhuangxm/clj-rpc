@@ -74,8 +74,9 @@
   (let [cmd (command-map (:method method-request))
         f (and cmd (command/.func cmd))
         new-method-request (context/adjust-method-request
-                            cmd request method-request)]
-    (rpc/execute-method f new-method-request)))
+                            cmd request method-request)
+        response (rpc/execute-method f new-method-request)]
+    (context/adjust-response cmd request response)))
 
 (defn help-commands
   "return the command list"

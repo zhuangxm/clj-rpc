@@ -134,3 +134,26 @@
         m-r
         (recur (rest options)
                (render-method-request option-key option-value request m-r))))))
+
+(defmulti render-response
+  "adjust method response or do some side-effects by option
+   return new response"
+  (fn [option-key option-value request method-response]
+    option-key))
+
+;;default return response
+(defmethod render-response :default
+  [option-key option-value request response]
+  response)
+
+(defn adjust-response
+  "enable every option has opportunity to adjust response or do    some side-effects according response,
+   return new response, handle reverse order of the options"
+  [cmd request response]
+  (loop [options (reverse (:options cmd))
+         resp_ response]
+    (let [[option-key option-value] (first options)]
+      (if (nil? option-key)
+        resp_
+        (recur (rest options)
+               (render-response option-key option-value request response))))))
