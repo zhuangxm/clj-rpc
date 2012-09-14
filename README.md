@@ -145,22 +145,31 @@ Example: we add a new option named :custom
 
 ```clojure
 
+(ns mynamespace
+   (:require [clj-rpc.context :as context]))
+
 ;;this method is mandatory and give you opportunity to change the
 ;;method-request according to the request and option, you must return
 ;;a new method-request
 ;;if you don't do anything, just return the old method-request
-(defmethod render-method-request  :custom
+(defmethod context/render-method-request  :custom
            [option-key option-value request method-request]
            ;; do some thing to change method-request
            method-request)
 
 ;;this method is option, default return the old response
 ;;you can change the response according to the option or do some side effects. 
-(defmethod render-response :custom
+(defmethod context/render-response :custom
            [option-key option-value request response]
            ;;do some thing to change response or do something side
            ;;effect according to the response.
            response)
+
+;;now you can export commands with new option like below
+;;the option-value can be any data type
+;;in this example is {:key1 :a :key2 :b}
+(export-commands 'mynamespace ['fn-1 'fn-2] 
+                 [ [:custom {:key1 :a :key2 b}]])
 ```
  
 ## user data
