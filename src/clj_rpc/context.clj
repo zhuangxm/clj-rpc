@@ -31,9 +31,9 @@
            context (if (and token fn-get-context) (fn-get-context token))]
        (binding [data/*atom-token* (atom token)]
          (let [response (handler (assoc request :context context))]
-           (if (and (not= token @data/*atom-token* token))
+           (if (not= token @data/*atom-token*)
              (assoc response :cookies {cookie-key
-                                       (merge {:path "/" :secure true :http-only true}
+                                       (merge {:path "/" :http-only true}
                                               cookie-attrs
                                               {:value @data/*atom-token*})})
              response))) ))))
