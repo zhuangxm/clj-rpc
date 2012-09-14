@@ -1,5 +1,6 @@
 # clj-rpc
 ## What's new
+* version 0.3.1-SNAPSHOT (add ability to define custom options of commands)
 * version 0.3.0 Release. (add http-only and secure into default cookie attrs to improve security. 
 * version 0.2.9 Release. (require clojure 1.4.0) 
 fixed that can not get the real ip address of client when using nginx proxy.
@@ -128,20 +129,47 @@ Example:
                  [ [:params-inject [ [:remote-addr] ] ]])
 ```
 
-Then the client will invoke function like (fn-do-something usernmae)
+Then the client will invoke function like (fn-do-something username)
 and the clj-rpc will dynamic invoke like (fn-do-something "127.0.0.1"
 username)
  
 Notice: Now, clj-rpc only supprots to inject params into the front of the
 parameters that client supplied .
   
+## define custom options of commands
+
+Since 0.3.1 , you can define new custom option by implement two multi method
+defined in the clj-rpc.context namespace.
+
+Example: we add a new option named :custom
+
+```clojure
+
+;;this method is mandatory and give you opportunity to change the
+;;method-request according to the request and option, you must return
+;;a new method-request
+;;if you don't do anything, just return the old method-request
+(defmethod render-method-request  :custom
+           [option-key option-value request method-request]
+           ;; do some thing to change method-request
+           method-request)
+
+;;this method is option, default return the old response
+;;you can change the response according to the option or do some side effects. 
+(defmethod render-response :custom
+           [option-key option-value request response]
+           ;;do some thing to change response or do something side
+           ;;effect according to the response.
+           response)
+```
+ 
 ## user data
 
 Sometime , we need to access data (like session) related the connection.
 
-Because this is a rpc invoke procedure, so when programmer wirtes
+Because this is a rpc invoke procedure, so when programmer writes
 functions we assume them do not and we do not want them to know anything
-about session in order to seperate the logic code and web framework. 
+about session in order to separate the logic code and web framework. 
 
 So clj-rpc.user-data supplies three functions to let programmer can
 access connection related data.
@@ -189,7 +217,7 @@ sample code:
  ;=============server code ===============
 
  ;;this is a function we want to export, 
- ;;but we want the sepcific user can invoke this function.
+ ;;but we want the specific user can invoke this function.
  (defn user-info 
     [username])
 
@@ -230,7 +258,7 @@ sample code:
 ### integrate test.
  clj-rpc.helper supplies the support for supprt integrate test.
  
- example can refer to clj-rpc.test.helper.clj in test filder.
+ example can refer to clj-rpc.test.helper.clj in test folder.
 
 ### clean timeout user data.
  clj-rpc.user-data unit supplies two method can clean the timeout
@@ -268,7 +296,7 @@ raise an error with code and error data in your logic code:
 
 ## License
 
-Copyright (C) 2011 FIXME
+Copyright (C) 2011
 
 Distributed under the Eclipse Public License, the same as Clojure.
 
