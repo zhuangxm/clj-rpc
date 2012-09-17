@@ -156,4 +156,4 @@
       (if (nil? option-key)
         resp_
         (recur (rest options)
-               (render-response option-key option-value request response))))))
+               (render-response option-key option-value request resp_))))))

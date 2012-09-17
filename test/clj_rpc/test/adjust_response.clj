@@ -21,6 +21,10 @@
   [option-key option-value request method-request]
   method-request)
 
+(defmethod context/render-method-request :multiply
+  [option-key option-value request method-request]
+  method-request)
+
 ;;this option add value to result and save it to the session
 (defmethod context/render-response :add
   [option-key option-value request response]
@@ -29,19 +33,30 @@
     (do (store/save-user-data! new-result)
         (assoc response :result new-result))))
 
+(defmethod context/render-response :multiply
+  [option-key option-value request response]
+  (let [result (:result response)
+        new-result (* result option-value)]
+    (do (store/save-user-data! new-result)
+        (assoc response :result new-result))))
+
+
+;;render-response execute reserve order of the options
+;;whilist render-method execute origin order of the options
+
 (defn setup
   []
   (start-server cookie-key-name)
   ;;export command with new define option
-  (server/export-commands 'clj-rpc.test.adjust-response ["succ-add"] [[:add 3]] ))
+  (server/export-commands 'clj-rpc.test.adjust-response ["succ-add"] [[:add 3] [:multiply 2]] ))
 
 (against-background [(before :contents (setup))
                      (after :contents (server/stop))]
   (facts "test clients are independent"
     (let [client1 (mk-clj-client cookie-key-name)
           client2 (mk-json-client cookie-key-name)]
-      (client1 "succ-add" [20]) => 23
-      (client2 "succ-add" [2]) => 5
-      (client1 "succ-add" [40]) => 66
-      (client2 "succ-add" [6]) => 14)))
+      (client1 "succ-add" [20]) => 43
+      (client2 "succ-add" [2]) => 7
+      (client1 "succ-add" [40]) => 169
+      (client2 "succ-add" [6]) => 29)))
 
