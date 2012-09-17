@@ -71,7 +71,8 @@
    return the execute result"
   [command-map request method-request]
   (logging/debug "execute-command == " method-request)
-  (let [cmd (command-map (:method method-request))
+  (let [request (assoc request :commands command-map)
+        cmd (command-map (:method method-request))
         f (and cmd (command/.func cmd))
         new-method-request (context/adjust-method-request
                             cmd request method-request)
