@@ -11,6 +11,10 @@
         r (+ x v)]
     (store/save-user-data! r)))
 
+(defn error-func
+  []
+  (/ 1 0))
+
 (defn logout
   []
   (store/delete-user-data!))
@@ -21,7 +25,8 @@
 (defn setup
   []
   (start-server cookie-key-name)
-  (server/export-commands 'clj-rpc.test.helper ["succ-add" "logout"]))
+  (server/export-commands 'clj-rpc.test.helper
+                          ["succ-add" "logout" "error-func"]))
 
 ;.;. For every disciplined effort, there is a multiple reward. -- Rohn
 (against-background [(before :contents (setup))
@@ -40,5 +45,6 @@
       (client1 "succ-add" [50]) => 50
       (client2 "logout" nil) => nil
       (client1 "succ-add" [50]) => 100
-      (client2 "succ-add" [5]) => 5)))
+      (client2 "succ-add" [5]) => 5
+      (client2 "error-func" []) => (throws RuntimeException))))
 
