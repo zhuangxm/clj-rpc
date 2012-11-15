@@ -1,6 +1,6 @@
 # clj-rpc
 ## What's new
-* version 0.3.1-SNAPSHOT (add ability to define custom options of commands)
+* version 0.3.1-SNAPSHOT (add ability to define custom options of commands, log error log and enable to log function invoke)
 * version 0.3.0 Release. (add http-only and secure into default cookie attrs to improve security. 
 * version 0.2.9 Release. (require clojure 1.4.0) 
 fixed that can not get the real ip address of client when using nginx proxy.
@@ -148,7 +148,7 @@ Examples:
 (defn log-func [v]
    (apply str (reverse v)))
 
-(export-commands 'mynamespace ["fn-log"]
+(export-commands 'mynamespace ["log-func"]
                  [ [:log :info] ])
 ```
 
