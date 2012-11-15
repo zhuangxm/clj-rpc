@@ -135,6 +135,28 @@ username)
  
 Notice: Now, clj-rpc only supprots to inject params into the front of the
 parameters that client supplied .
+
+## log function invokes
+
+Since 0.3.1 you can define to enable clj-rpc log function using
+option :log, like [ [:log log-level] ] , log-level can be :trace
+:debug :info :warn :error :fatal. 
+
+Examples:
+
+```clojure
+(defn log-func [v]
+   (apply str (reverse v)))
+
+(export-commands 'mynamespace ["fn-log"]
+                 [ [:log :info] ])
+```
+
+When you invoke (log-func "hello"), the clj-rpc will  log like below:
+
+``` 
+2012-11-15 14:53:25,957 WARN  clj-rpc.context: client-ip : 127.0.0.1 {:method-request {:method "log-func", :params ["hello"]}, :response {:result "olleh", :id nil}}
+```  
   
 ## define custom options of commands
 
