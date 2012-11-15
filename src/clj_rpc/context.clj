@@ -118,6 +118,12 @@
                #(concat (map (partial get-in request) option-value) %))
     method-request))
 
+;;render :log option
+;;just return the original method-request to make sure we need this option
+(defmethod render-method-request :log
+  [_ option-value request method-request]
+  method-request)
+
 ;;default throw RuntimeException
 (defmethod render-method-request :default
   [option-key option-value request method-request]
@@ -144,6 +150,15 @@
 ;;default return response
 (defmethod render-response :default
   [option-key option-value request response]
+  response)
+
+;;log client-ip method-request and response
+(defmethod render-response :log
+  [option-key option-value request response]
+  (logging/log option-value
+               (str "client-ip : " (get-in request [:remote-addr]) " "
+                    {:method-request (get-in request [:method-request])
+                     :response response}))
   response)
 
 (defn adjust-response

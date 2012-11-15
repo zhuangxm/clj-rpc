@@ -70,8 +70,8 @@
    execute this function with args
    return the execute result"
   [command-map request method-request]
-  (logging/debug "execute-command == " method-request)
-  (let [request (assoc request :commands command-map)
+  (let [request (assoc request :commands command-map
+                       :method-request method-request)
         cmd (command-map (:method method-request))
         f (and cmd (command/.func cmd))
         new-method-request (context/adjust-method-request
