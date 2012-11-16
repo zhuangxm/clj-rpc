@@ -193,10 +193,6 @@
   "enable every option has opportunity to adjust response or do    some side-effects according response,
    return new response, handle reverse order of the options"
   [cmd request response]
-  (loop [options (reverse (:options cmd))
-         resp_ response]
-    (let [[option-key option-value] (first options)]
-      (if (nil? option-key)
-        resp_
-        (recur (rest options)
-               (render-response option-key option-value request resp_))))))
+  (reduce (fn [resp [option-key option-value]]
+            (render-response option-key option-value request resp))
+          response (reverse (:options cmd))))
