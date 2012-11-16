@@ -161,13 +161,11 @@
 (defn adjust-method-request
   "return new method-request (possible with error message)"
   [cmd request method-request]
-  (loop [options (:options cmd)
-         m-r method-request]
-    (let [[option-key option-value] (first options)]
-      (if (or (nil? option-key) (error-method-request? m-r))
-        m-r
-        (recur (rest options)
-               (render-method-request option-key option-value request m-r))))))
+  (reduce (fn [m-r [option-key option-value]]
+            (if (error-method-request? m-r)
+              m-r
+              (render-method-request option-key option-value request m-r)))
+          method-request (:options cmd)))
 
 (defmulti render-response
   "adjust method response or do some side-effects by option
