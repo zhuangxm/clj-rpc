@@ -1,6 +1,11 @@
 # clj-rpc
 ## What's new
-* version 0.3.1-SNAPSHOT (add ability to define custom options of commands, log error log and enable to log function invoke)
+* version 0.3.1-SNAPSHOT
+  * define custom options of command.
+  * log error log when execute a command.
+  * add a command option :log to log function request and result and client ip.
+  * log warn when a execution time of a function is too log. 
+  * using [easyconf](https://github.com/sukuizhang/easyconf) to config cost parameter :warning-cost-ms (default 100ms)
 * version 0.3.0 Release. (add http-only and secure into default cookie attrs to improve security. 
 * version 0.2.9 Release. (require clojure 1.4.0) 
 fixed that can not get the real ip address of client when using nginx proxy.
@@ -136,7 +141,7 @@ username)
 Notice: Now, clj-rpc only supprots to inject params into the front of the
 parameters that client supplied .
 
-## log function invokes
+## log the request and result of function invokes
 
 Since 0.3.1 you can define to enable clj-rpc log function using
 option :log, like [ [:log log-level] ] , log-level can be :trace
@@ -157,7 +162,6 @@ When you invoke (log-func "hello"), the clj-rpc will  log like below:
 ``` 
 2012-11-15 14:53:25,957 WARN  clj-rpc.context: client-ip : 127.0.0.1 {:method-request {:method "log-func", :params ["hello"]}, :response {:result "olleh", :id nil}}
 ```  
-  
 ## define custom options of commands
 
 Since 0.3.1 , you can define new custom option by implement two multi method
