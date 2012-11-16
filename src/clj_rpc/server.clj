@@ -106,7 +106,7 @@
        (when-let [[f-encode] (protocol/serialization s-method)]
          (f-encode (help-commands @*commands*))))
   (POST "/:s-method/invoke" [s-method :as reqeust]
-        (let [rpc-request (slurp (:body reqeust))]
+        (let [rpc-request (:body reqeust)]
           (logging/debug "invoking (" s-method ") request: " rpc-request)
           (let [[f-encode f-decode] (protocol/serialization s-method)]
             (f-encode (rpc-invoke @*commands* reqeust (f-decode rpc-request))))))
@@ -141,6 +141,8 @@
                             (:token-cookie-key options))
       (context/wrap-client-ip)
       (wrap-commands (:commands options))
+      (context/wrap-cost)
+      (context/wrap-body)
       handler/site))
 
 (defn start

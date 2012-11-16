@@ -1,12 +1,27 @@
 (ns clj-rpc.context
   (:require [ring.middleware.cookies :as cookies]
             [clj-rpc.user-data :as data]
-            [clojure.tools.logging :as logging]))
+            [clojure.tools.logging :as logging]
+            [easyconf.core :as ec]))
+
+;;define the warning cost value (ms)
+(ec/defconf warning-cost-ms 100)
 
 (defn get-proxy-ip
   [request]
   (or (get-in request [:headers "x-forwarded-for"])
       (get-in request [:headers "x-real-ip"])))
+
+
+(defn get-client-ip
+  [request]
+  (:remote-addr request))
+
+(defn wrap-body
+  "convert the body of the request from InputStream to String"
+  [handler]
+  (fn [request]
+    (handler (assoc request :body (slurp (:body request))))))
 
 (defn wrap-client-ip
   "let :remote-addr represents the real client ip even though
@@ -37,6 +52,19 @@
                                               cookie-attrs
                                               {:value @data/*atom-token*})})
              response))) ))))
+
+(defn wrap-cost
+  "log the time of invoke that is bigger than warning-cost-ms"
+  [handler]
+  (fn [request]
+    (let [start (System/currentTimeMillis)
+          response (handler request)
+          cost (- (System/currentTimeMillis) start)]
+      (when (>= cost warning-cost-ms)
+        (logging/warn (str "client-ip: " (get-client-ip request)
+                           " invoke reqeust: " (:body request)
+                           " cost: " cost)))
+      response)))
 
 (defn add-context
   "add context to specific command
@@ -156,7 +184,7 @@
 (defmethod render-response :log
   [option-key option-value request response]
   (logging/log option-value
-               (str "client-ip : " (get-in request [:remote-addr]) " "
+               (str "client-ip: " (get-client-ip request) " "
                     {:method-request (get-in request [:method-request])
                      :response response}))
   response)
