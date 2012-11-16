@@ -5,7 +5,8 @@
             [clj-rpc.client :as client]
             [clj-rpc.user-data :as store]
             [clj-http.client :as http]
-            [cheshire.core :as json]))
+            [cheshire.core :as json]
+            [clj-rpc.helper :as helper]))
 
 (defn fn-with-context-check
   "test function to export"
@@ -28,6 +29,9 @@
   []
   (store/delete-user-data!))
 
+(defn fn-test-commands
+  [_commands]
+  (get _commands "fn-test-commands"))
 
 (defn setup []
   (server/start {:join? false :port server/rpc-default-port :host "127.0.0.1"
@@ -41,7 +45,9 @@
   (server/export-commands 'clojure.core ['str]
                           [ [:params-inject [ [:remote-addr]]]])
   (server/export-commands 'clj-rpc.test.integrate
-                          ['fn-save-data 'fn-get-data 'fn-delete-data]))
+                          ['fn-save-data 'fn-get-data 'fn-delete-data])
+  (server/export-commands 'clj-rpc.test.integrate ['fn-test-commands]
+                          [[:params-inject [[:commands]]]]))
 
 (defn tear-down []
   (server/stop))
@@ -148,4 +154,8 @@
       ;;can delete user data
       (invoke-and-get-result query-delete cookie) => (contains {"result" nil})
       ;;can not get data when the user data has been deleted.
-      (invoke-and-get-result query-get cookie) => (contains {"result" nil}))))
+      (invoke-and-get-result query-get cookie) => (contains {"result" nil})))
+
+  (facts "test request include commands"
+    (let [client (helper/mk-clj-client "hjd-session")]
+      (client "fn-test-commands" []) => (contains {:name "fn-test-commands"}))))
