@@ -70,12 +70,14 @@
    execute this function with args
    return the execute result"
   [command-map request method-request]
-  (logging/debug "execute-command == " method-request)
-  (let [cmd (command-map (:method method-request))
+  (let [request (assoc request :commands command-map
+                       :method-request method-request)
+        cmd (command-map (:method method-request))
         f (and cmd (command/.func cmd))
         new-method-request (context/adjust-method-request
-                            cmd request method-request)]
-    (rpc/execute-method f new-method-request)))
+                            cmd request method-request)
+        response (rpc/execute-method f new-method-request)]
+    (context/adjust-response cmd request response)))
 
 (defn help-commands
   "return the command list"
@@ -104,7 +106,7 @@
        (when-let [[f-encode] (protocol/serialization s-method)]
          (f-encode (help-commands @*commands*))))
   (POST "/:s-method/invoke" [s-method :as reqeust]
-        (let [rpc-request (slurp (:body reqeust))]
+        (let [rpc-request (:body reqeust)]
           (logging/debug "invoking (" s-method ") request: " rpc-request)
           (let [[f-encode f-decode] (protocol/serialization s-method)]
             (f-encode (rpc-invoke @*commands* reqeust (f-decode rpc-request))))))
@@ -139,6 +141,8 @@
                             (:token-cookie-key options))
       (context/wrap-client-ip)
       (wrap-commands (:commands options))
+      (context/wrap-cost)
+      (context/wrap-body)
       handler/site))
 
 (defn start

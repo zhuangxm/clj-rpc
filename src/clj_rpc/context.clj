@@ -1,12 +1,27 @@
 (ns clj-rpc.context
   (:require [ring.middleware.cookies :as cookies]
             [clj-rpc.user-data :as data]
-            [clojure.tools.logging :as logging]))
+            [clojure.tools.logging :as logging]
+            [easyconf.core :as ec]))
+
+;;define the warning cost value (ms)
+(ec/defconf warning-cost-ms 100)
 
 (defn get-proxy-ip
   [request]
   (or (get-in request [:headers "x-forwarded-for"])
       (get-in request [:headers "x-real-ip"])))
+
+
+(defn get-client-ip
+  [request]
+  (:remote-addr request))
+
+(defn wrap-body
+  "convert the body of the request from InputStream to String"
+  [handler]
+  (fn [request]
+    (handler (assoc request :body (slurp (:body request))))))
 
 (defn wrap-client-ip
   "let :remote-addr represents the real client ip even though
@@ -31,12 +46,25 @@
            context (if (and token fn-get-context) (fn-get-context token))]
        (binding [data/*atom-token* (atom token)]
          (let [response (handler (assoc request :context context))]
-           (if (and (not= token @data/*atom-token* token))
+           (if (not= token @data/*atom-token*)
              (assoc response :cookies {cookie-key
-                                       (merge {:path "/" :secure true :http-only true}
+                                       (merge {:path "/" :http-only true}
                                               cookie-attrs
                                               {:value @data/*atom-token*})})
              response))) ))))
+
+(defn wrap-cost
+  "log the time of invoke that is bigger than warning-cost-ms"
+  [handler]
+  (fn [request]
+    (let [start (System/currentTimeMillis)
+          response (handler request)
+          cost (- (System/currentTimeMillis) start)]
+      (when (>= cost warning-cost-ms)
+        (logging/warn (str "client-ip: " (get-client-ip request)
+                           " invoke reqeust: " (:body request)
+                           " cost: " cost)))
+      response)))
 
 (defn add-context
   "add context to specific command
@@ -118,6 +146,12 @@
                #(concat (map (partial get-in request) option-value) %))
     method-request))
 
+;;render :log option
+;;just return the original method-request to make sure we need this option
+(defmethod render-method-request :log
+  [_ option-value request method-request]
+  method-request)
+
 ;;default throw RuntimeException
 (defmethod render-method-request :default
   [option-key option-value request method-request]
@@ -127,10 +161,36 @@
 (defn adjust-method-request
   "return new method-request (possible with error message)"
   [cmd request method-request]
-  (loop [options (:options cmd)
-         m-r method-request]
-    (let [[option-key option-value] (first options)]
-      (if (or (nil? option-key) (error-method-request? m-r))
-        m-r
-        (recur (rest options)
-               (render-method-request option-key option-value request m-r))))))
+  (reduce (fn [m-r [option-key option-value]]
+            (if (error-method-request? m-r)
+              m-r
+              (render-method-request option-key option-value request m-r)))
+          method-request (:options cmd)))
+
+(defmulti render-response
+  "adjust method response or do some side-effects by option
+   return new response"
+  (fn [option-key option-value request method-response]
+    option-key))
+
+;;default return response
+(defmethod render-response :default
+  [option-key option-value request response]
+  response)
+
+;;log client-ip method-request and response
+(defmethod render-response :log
+  [option-key option-value request response]
+  (logging/log option-value
+               (str "client-ip: " (get-client-ip request) " "
+                    {:method-request (get-in request [:method-request])
+                     :response response}))
+  response)
+
+(defn adjust-response
+  "enable every option has opportunity to adjust response or do    some side-effects according response,
+   return new response, handle reverse order of the options"
+  [cmd request response]
+  (reduce (fn [resp [option-key option-value]]
+            (render-response option-key option-value request resp))
+          response (reverse (:options cmd))))

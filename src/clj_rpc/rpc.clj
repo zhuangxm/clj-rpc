@@ -1,5 +1,6 @@
 (ns clj-rpc.rpc
-  (:require [clj-rpc.error])
+  (:require [clj-rpc.error]
+            [clojure.tools.logging :as log])
   (:import [clojure.lang ArityException]))
 
 ;;defind rpc message format, refering json-rpc definition
@@ -57,4 +58,7 @@
         (mk-error :method-not-found id)))
     (catch ArityException e (mk-error :invalid-params id (.getMessage e)))
     (catch clojure.lang.ExceptionInfo e (mk-error-from-exinfo id e))
-    (catch Exception e (mk-error :internal-error id (.getMessage e)))))
+    (catch Exception e (do (log/error e
+                                      (str "execute " f " error , :params "
+                                           params))
+                           (mk-error :internal-error id (.getMessage e))))))
