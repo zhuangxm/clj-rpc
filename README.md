@@ -1,6 +1,6 @@
 # clj-rpc
 ## What's new
-* version 0.3.1-SNAPSHOT
+* version 0.3.1 Release
   * define custom options of command.
   * log error log when execute a command.
   * add a command option :log to log function request and result and client ip.
@@ -240,7 +240,7 @@ be exported.
 add to porject.clj
 
 ```clojure
-[clj-rpc "0.2.9"]
+[clj-rpc "0.3.1"]
 ```
 
 sample code:
