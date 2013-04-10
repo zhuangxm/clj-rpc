@@ -34,7 +34,9 @@
          {:methd-name \"str\" :params [\"hello\" \"world\"]}
          or a collection of method-request.")
   (help [endpoint]
-    "Returns the list of the functions that endpoint support."))
+    "Returns the list of the functions that endpoint support.")
+  (token [endpoint]
+    "Return this endpoint's session token"))
 
 (def ^:private content-type "charset=UTF-8")
 
@@ -69,14 +71,22 @@
     (get-single-invoke-result response)
     (map get-single-invoke-result response)))
 
+(defn update-token-atom
+  [token-atom resp]
+  (reset! token-atom
+          (or (get-in resp [:cookies "hjd-token" :value])
+              @token-atom))
+  resp)
+
 (defn- remote-call
   "invoke a method with args using http"
-  [endpoint-url fn-post-request f-read f-write  invoke-request]
+  [endpoint-url fn-post-request f-read f-write  invoke-request token-atom]
   (let [query (mk-query f-write invoke-request)
         response (->> query
-         (fn-post-request endpoint-url)
-         :body
-         (f-read))]
+                      (fn-post-request endpoint-url)
+                      (update-token-atom token-atom)
+                      :body
+                      (f-read))]
     (logging/debug "url:" endpoint-url " query:" query " response:" response)
     (get-invoke-result response)))
 
@@ -95,7 +105,7 @@
 
 (defn rpc-endpoint
   "Returns the endpoint to execute RPC functions."
-  [& {:keys [server port on-wire fn-post-request]
+  [& {:keys [server port on-wire fn-post-request token-atom]
       :or {server "localhost"
            port server/rpc-default-port on-wire "clj"
            fn-post-request http/post}}]
@@ -105,9 +115,12 @@
       (reify RpcEndpoint
         (invoke [endpoint token method-request]
           (remote-call (invoke-url url token) fn-post-request
-                       f-decode f-encode method-request))
+                       f-decode f-encode method-request token-atom))
         (help [_]
-              (remote-help (str url "/help") f-decode))))))
+          (remote-help (str url "/help") f-decode))
+        (token [_]
+          (if token-atom
+            @token-atom))))))
 
 (defn invoke-rpc-with-token
   "Invoke remote func-name on endpoint with args.
