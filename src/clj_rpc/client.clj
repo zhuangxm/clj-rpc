@@ -72,19 +72,20 @@
     (map get-single-invoke-result response)))
 
 (defn update-token-atom
-  [token-atom resp]
-  (reset! token-atom
-          (or (get-in resp [:cookies "hjd-token" :value])
-              @token-atom))
+  [token-atom cookie-key resp]
+  (if cookie-key
+    (reset! token-atom
+            (or (get-in resp [:cookies cookie-key :value])
+                @token-atom)))
   resp)
 
 (defn- remote-call
   "invoke a method with args using http"
-  [endpoint-url fn-post-request f-read f-write  invoke-request token-atom]
+  [endpoint-url fn-post-request f-read f-write  invoke-request token-atom cookie-key]
   (let [query (mk-query f-write invoke-request)
         response (->> query
                       (fn-post-request endpoint-url)
-                      (update-token-atom token-atom)
+                      (update-token-atom token-atom cookie-key)
                       :body
                       (f-read))]
     (logging/debug "url:" endpoint-url " query:" query " response:" response)
@@ -105,17 +106,19 @@
 
 (defn rpc-endpoint
   "Returns the endpoint to execute RPC functions."
-  [& {:keys [server port on-wire fn-post-request token-atom]
+  [& {:keys [server port on-wire fn-post-request cookie-key]
       :or {server "localhost"
-           port server/rpc-default-port on-wire "clj"
+           port server/rpc-default-port
+           on-wire "clj"
            fn-post-request http/post}}]
   {:pre [(string? server) (< 1024 port 65535) (string? on-wire)]}
   (when-let [[f-encode f-decode] (protocol/serialization on-wire)]
-    (let [url (format "http://%s:%d/%s" server port on-wire)]
+    (let [url (format "http://%s:%d/%s" server port on-wire)
+          token-atom (atom nil)]
       (reify RpcEndpoint
         (invoke [endpoint token method-request]
           (remote-call (invoke-url url token) fn-post-request
-                       f-decode f-encode method-request token-atom))
+                       f-decode f-encode method-request token-atom cookie-key))
         (help [_]
           (remote-help (str url "/help") f-decode))
         (token [_]
