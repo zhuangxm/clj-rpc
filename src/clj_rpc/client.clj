@@ -141,4 +141,4 @@
   if only one request return only one result,
   otherwise return collection of result"
   [endpoint method-name args & func-args]
-  (apply invoke-rpc-with-token endpoint nil method-name args func-args))
+  (apply invoke-rpc-with-token endpoint (token endpoint) method-name args func-args))
