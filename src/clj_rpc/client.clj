@@ -122,8 +122,7 @@
         (help [_]
           (remote-help (str url "/help") f-decode))
         (token [_]
-          (if token-atom
-            @token-atom))))))
+          @token-atom)))))
 
 (defn invoke-rpc-with-token
   "Invoke remote func-name on endpoint with args.
