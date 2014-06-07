@@ -1,5 +1,7 @@
 # clj-rpc
 ## What's new
+* version 0.3.2 Release
+  * upgrade depedency library version.
 * version 0.3.1 Release
   * define custom options of command.
   * log error log when execute a command.
@@ -63,13 +65,13 @@ example:
 
 ```clojure
 (export-commands 'clojure.core ["+" "-"] 
-   [ [:require-context true] [:params-check {0 [:number1]}] ])
+   [ [:require-context true] [:params-check {0 [:number]}] ])
 ```
 
 this example mean we export a function + - of the clojure.core
 
 And the client must supply a token that can get context, and
-the (get-in context [:username]) must equal the first parameter of
+the (get-in context [:number]) must equal the first parameter of
 invoke.
 
 The context token and params check will explain below.
@@ -95,7 +97,7 @@ we have a get-context function like below,
 
 ```clojure 
 (defn my-get-context [token]
-  (get {"token1" {:number1 1} "token2" {:number2 2}}))
+  (get {"token1" {:number 1} "token2" {:number 2}}))
 ```
 
 If we remote invoke function like (+ 1 3) with token3,
@@ -104,8 +106,8 @@ then we will get a error, because token3 can not get a context.
 
 and if we invoke function like (+ 2 3) with token1
 
-then we will get a error two. 
-because (not= 2 (get-in [:number1] {:number1 1}))
+then we will get an error too. 
+because (not= 2 (get-in {:number 1} [:number]))
 
 and if we invoke function like (+ 1 3) with token1, 
 
@@ -240,7 +242,7 @@ be exported.
 add to porject.clj
 
 ```clojure
-[clj-rpc "0.3.1"]
+[clj-rpc "0.3.2"]
 ```
 
 sample code:
