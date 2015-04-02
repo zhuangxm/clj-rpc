@@ -31,7 +31,8 @@
 
 (defn fn-test-commands
   [_commands]
-  (get _commands "fn-test-commands"))
+  (select-keys (get _commands "fn-test-commands")
+    [:name :options :arglist] ))
 
 (defn setup []
   (server/start {:join? false :port server/rpc-default-port :host "127.0.0.1"
