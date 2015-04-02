@@ -1,5 +1,7 @@
 # clj-rpc
 ## What's new
+* version 0.3.3 Release
+  * using edn/read-string rather than clojure read-string to avoid security risk.
 * version 0.3.2 Release
   * upgrade depedency library version.
 * version 0.3.1 Release
