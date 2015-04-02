@@ -244,7 +244,7 @@ be exported.
 add to porject.clj
 
 ```clojure
-[clj-rpc "0.3.2"]
+[clj-rpc "0.3.3"]
 ```
 
 sample code:
