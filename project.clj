@@ -1,4 +1,4 @@
-(defproject clj-rpc "0.3.3"
+(defproject clj-rpc "0.3.4"
   :description "simple rpc using clojure"
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/tools.logging "0.3.1"]
@@ -6,7 +6,7 @@
                  [clj-http "0.7.8"]
                  [compojure "1.1.6"]
                  [ring "1.2.1"]
-                 [cheshire "5.2.0"]
+                 [cheshire "5.3.1"]
                  [easyconf "0.1.1"]]
 
   :profiles {:dev

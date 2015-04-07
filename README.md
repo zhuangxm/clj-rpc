@@ -1,9 +1,10 @@
 # clj-rpc
 ## What's new
-* version 0.3.3 Release
+* version 0.3.4 Release
+  * upgrade cheshire to 5.3.1
   * using edn/read-string rather than clojure read-string to avoid security risk.
 * version 0.3.2 Release
-  * upgrade depedency library version.
+  * upgrade dependency library version.
 * version 0.3.1 Release
   * define custom options of command.
   * log error log when execute a command.
@@ -16,7 +17,7 @@ fixed that can not get the real ip address of client when using nginx proxy.
 
 A simple clojure rpc using clojure and json protocol 
 
-all the arguments of the function and the result must statify the
+all the arguments of the function and the result must satisfy the
 rule:
 
 (= form (f-decode (f-encode form)))
@@ -84,7 +85,7 @@ The context token and params check will explain below.
 * every token specify a unique client.
 * Token can be passed to server by query token parameter or cookie.
 
-When we start a clj-rpc server we can sepcific get-context function,
+When we start a clj-rpc server we can specific get-context function,
 that is a function that can get context of the client by the token. like
 (get-context token). You can see the example in the section Usage. 
 
@@ -131,7 +132,7 @@ client invokes.
 Example: 
 
 ```clojure
-(defn fn-do-someting [client-ip username]
+(defn fn-do-something [client-ip username]
       ... )
 
 (export-commands 'mynamespace ["fn-do-something"]
@@ -142,7 +143,7 @@ Then the client will invoke function like (fn-do-something username)
 and the clj-rpc will dynamic invoke like (fn-do-something "127.0.0.1"
 username)
  
-Notice: Now, clj-rpc only supprots to inject params into the front of the
+Notice: Now, clj-rpc only supports to inject params into the front of the
 parameters that client supplied .
 
 ## log the request and result of function invokes
@@ -241,10 +242,10 @@ be exported.
 ``` 
 ## Usage 
 
-add to porject.clj
+add to project.clj
 
 ```clojure
-[clj-rpc "0.3.3"]
+[clj-rpc "0.3.4"]
 ```
 
 sample code:
@@ -295,7 +296,7 @@ sample code:
 ## addition
 
 ### integrate test.
- clj-rpc.helper supplies the support for supprt integrate test.
+ clj-rpc.helper supplies the support for support integrate test.
  
  example can refer to clj-rpc.test.helper.clj in test folder.
 
