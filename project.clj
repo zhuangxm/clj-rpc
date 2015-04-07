@@ -1,4 +1,4 @@
-(defproject clj-rpc "0.3.3"
+(defproject clj-rpc "0.3.4"
   :description "simple rpc using clojure"
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/tools.logging "0.3.1"]

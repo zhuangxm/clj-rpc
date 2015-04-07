@@ -1,8 +1,8 @@
 # clj-rpc
 ## What's new
-* version 0.3.3 Release
-  * using edn/read-string rather than clojure read-string to avoid security risk.
+* version 0.3.4 Release
   * upgrade cheshire to 5.3.1
+  * using edn/read-string rather than clojure read-string to avoid security risk.
 * version 0.3.2 Release
   * upgrade dependency library version.
 * version 0.3.1 Release
@@ -245,7 +245,7 @@ be exported.
 add to project.clj
 
 ```clojure
-[clj-rpc "0.3.3"]
+[clj-rpc "0.3.4"]
 ```
 
 sample code:
