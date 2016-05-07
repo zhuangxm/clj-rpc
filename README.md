@@ -1,5 +1,7 @@
 # clj-rpc
 ## What's new
+* version 0.3.5 Release
+  * add default timeout to clj-rpc client, {:conn-timeout 10000, :socket-timeout 20000}
 * version 0.3.4 Release
   * upgrade cheshire to 5.3.1
   * using edn/read-string rather than clojure read-string to avoid security risk.
@@ -279,7 +281,7 @@ sample code:
 
  ;==============client code ===============
  ;; Obtain handle to endpoint
- (def endp (client/rpc-endpoint :server "localhost"))
+ (def endp (client/rpc-endpoint :server "localhost" :conn-timeout 10000 :socket-timeout 20000))
 
  ;; get all export commands
  (client/help endp)
