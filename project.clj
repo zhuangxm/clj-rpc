@@ -1,4 +1,4 @@
-(defproject clj-rpc "0.3.4"
+(defproject clj-rpc "0.3.5"
   :description "simple rpc using clojure"
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/tools.logging "0.3.1"]
@@ -12,4 +12,7 @@
   :profiles {:dev
              {:dependencies [[log4j "1.2.16"]
                              [midje "1.6.3"]]
-              :plugins [[lein-midje "3.1.3"]]}})
+              :plugins [[lein-midje "3.1.3"]]}}
+
+  :repositories {"clojars" {:url "https://clojars.org/repo"
+                                  :sign-releases false}})

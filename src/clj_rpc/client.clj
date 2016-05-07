@@ -40,9 +40,11 @@
 
 (defn mk-query
   "make query object to send to endpoint."
-  [f-encode method-request]
+  [f-encode method-request & [conn-timeout socket-timeout]]
   (let [body (f-encode method-request) ]
-    {:body body :content-type content-type}))
+    {:body body :content-type content-type
+     :conn-timeout (or conn-timeout 0)
+     :socket-timeout (or socket-timeout 0)}))
 
 (defn get-response-value
   "get response key value ,either keywork or string"
@@ -71,12 +73,12 @@
 
 (defn- remote-call
   "invoke a method with args using http"
-  [endpoint-url fn-post-request f-read f-write  invoke-request]
-  (let [query (mk-query f-write invoke-request)
+  [endpoint-url fn-post-request f-read f-write  invoke-request conn-timeout socket-timeout]
+  (let [query (mk-query f-write invoke-request conn-timeout socket-timeout)
         response (->> query
-         (fn-post-request endpoint-url)
-         :body
-         (f-read))]
+                      (fn-post-request endpoint-url)
+                      :body
+                      (f-read))]
     (logging/debug "url:" endpoint-url " query:" query " response:" response)
     (get-invoke-result response)))
 
@@ -95,17 +97,19 @@
 
 (defn rpc-endpoint
   "Returns the endpoint to execute RPC functions."
-  [& {:keys [server port on-wire fn-post-request]
+  [& {:keys [server port on-wire fn-post-request conn-timeout socket-timeout]
       :or {server "localhost"
            port server/rpc-default-port on-wire "clj"
-           fn-post-request http/post}}]
+           fn-post-request http/post
+           conn-timeout 10000
+           socket-timeout 20000}}]
   {:pre [(string? server) (< 1024 port 65535) (string? on-wire)]}
   (when-let [[f-encode f-decode] (protocol/serialization on-wire)]
     (let [url (format "http://%s:%d/%s" server port on-wire)]
       (reify RpcEndpoint
         (invoke [endpoint token method-request]
           (remote-call (invoke-url url token) fn-post-request
-                       f-decode f-encode method-request))
+                       f-decode f-encode method-request conn-timeout socket-timeout))
         (help [_]
               (remote-help (str url "/help") f-decode))))))
 
@@ -115,7 +119,7 @@
   if only one request return only one result,
   otherwise return collection of result"
   [endpoint token method-name args & func-args]
-  (let [method-request 
+  (let [method-request
         (if (seq func-args)
           (map #(apply struct str-method-request %)
                (partition 2 2 (concat [method-name args] func-args)))
